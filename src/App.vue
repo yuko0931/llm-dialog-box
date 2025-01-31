@@ -20,6 +20,10 @@ import { RouterLink, RouterView } from 'vue-router'
   display: flex;
   align-items: center;
 
+  a {
+    color: #ccc;
+  }
+
   .split-line {
     margin: 0 10px;
     display: inline-block;
