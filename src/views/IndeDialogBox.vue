@@ -6,9 +6,7 @@
       <div class="chat-wrapper">
         <div class="chat-list" v-if="!showTip">
           <div v-for="(message, index) in messages" :key="index">
-            <div>
-              <MyQuestion :message="message"></MyQuestion>
-            </div>
+            <MyQuestion :message="message"></MyQuestion>
           </div>
         </div>
         <div class="input-box" :class="{ fixed: isFixed }">
@@ -135,7 +133,6 @@ const handleUploadAttach = () => {
       justify-content: center;
       align-items: center;
       position: relative;
-      overflow: auto;
       flex-grow: 1;
 
       .chat-list {
@@ -144,6 +141,7 @@ const handleUploadAttach = () => {
         display: flex;
         flex-flow: column nowrap;
         align-items: center;
+        overflow: auto;
 
         div {
           width: 100%;
