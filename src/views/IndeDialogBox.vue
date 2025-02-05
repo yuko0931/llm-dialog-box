@@ -6,8 +6,14 @@
       <div class="chat-wrapper">
         <div class="chat-list" v-if="!showTip">
           <div v-for="(message, index) in messages" :key="index">
-            <MyQuestion :message="message"></MyQuestion>
+            <MyQuestion :message="message.content" v-show="message.role === 'user'"></MyQuestion>
+            <LLMAnswer :answer="message.content" v-show="message.role === 'assistant'"></LLMAnswer>
           </div>
+          <!-- 如果正在接收流式数据，显示当前正在构建的llm回答 -->
+          <!-- 使用 keep-alive 缓存流式内容 -->
+          <keep-alive>
+            <LLMAnswer :answer="currentAnswer" v-show="isStreaming"></LLMAnswer>
+          </keep-alive>
         </div>
         <div class="input-box" :class="{ fixed: isFixed }">
           <div class="tip" v-if="showTip">有什么可以帮忙的？</div>
@@ -80,18 +86,43 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import MyQuestion from '@/components/MyQuestion.vue'
+import LLMAnswer from '@/components/LLMAnswer.vue'
+import { streamingChat } from '@/service/chat'
+import type { chatMessage } from '@/types/index'
 
 const inputMessage = ref<string>('') // 输入框的值
-const messages = ref<string[]>([]) // 消息列表
+const messages = ref<chatMessage[]>([]) // 消息列表
 const showTip = ref<boolean>(true) // 控制 tip 的显示
 const isFixed = ref<boolean>(false) // 控制输入框是否固定在底部
 const fileInput = ref<HTMLInputElement | null>(null) // 获取文件选择框的引用
-const handleSendMessage = () => {
-  console.log(inputMessage.value)
-  messages.value.push(inputMessage.value)
+const currentAnswer = ref<string>('') // 当前正在构建的llm回答
+const isStreaming = ref<boolean>(false) // 是否正在接收流式数据
+
+const handleSendMessage = async () => {
+  const query = inputMessage.value.trim()
+  if (!query) return
+  console.log(query)
+  messages.value.push({ role: 'user', content: query })
   showTip.value = false
   isFixed.value = true
   inputMessage.value = ''
+
+  // 重置当前回答和流式状态
+  currentAnswer.value = ''
+  isStreaming.value = true
+
+  await streamingChat({
+    query,
+    callback: (data) => {
+      if (data.role === 'assistant') {
+        currentAnswer.value += data.content || ''
+      }
+    },
+  })
+
+  // 流式对话结束后，将完整的回答添加到消息列表
+  messages.value.push({ role: 'assistant', content: currentAnswer.value })
+  isStreaming.value = false
 }
 
 const handleUploadAttach = () => {
