@@ -10,6 +10,15 @@
 
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import { getConversationList } from '@/service/conversation.ts'
+
+getConversationList()
+  .then((list) => {
+    console.log('conversation list: ', list)
+  })
+  .catch((error) => {
+    console.error('Failed to get conversation list: ', error)
+  })
 </script>
 
 <style lang="scss" scoped>
@@ -19,6 +28,10 @@ import { RouterLink, RouterView } from 'vue-router'
   right: 20px;
   display: flex;
   align-items: center;
+
+  a {
+    color: #ccc;
+  }
 
   .split-line {
     margin: 0 10px;
