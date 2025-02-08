@@ -44,6 +44,7 @@
               </div>
               <div
                 class="send btn"
+                v-show="!isStreaming"
                 :class="inputMessage.trim() ? 'active' : ''"
                 @click="handleSendMessage"
               >
@@ -74,6 +75,9 @@
                   ></path>
                 </svg>
               </div>
+              <div class="stop btn" v-show="isStreaming" @click="handleStopStreaming">
+                <div class="box"></div>
+              </div>
             </div>
           </div>
           <div class="bottom-info" v-if="!showTip">内容由 AI 生成，请仔细甄别</div>
@@ -87,7 +91,8 @@
 import { ref } from 'vue'
 import MyQuestion from '@/components/MyQuestion.vue'
 import LLMAnswer from '@/components/LLMAnswer.vue'
-import { streamingChat } from '@/service/chat'
+import { streamingChat, cancelstreamingChat } from '@/service/chat'
+import { createConversation } from '@/service/conversation'
 import type { chatMessage } from '@/types/index'
 
 const inputMessage = ref<string>('') // 输入框的值
@@ -97,31 +102,65 @@ const isFixed = ref<boolean>(false) // 控制输入框是否固定在底部
 const fileInput = ref<HTMLInputElement | null>(null) // 获取文件选择框的引用
 const currentAnswer = ref<string>('') // 当前正在构建的llm回答
 const isStreaming = ref<boolean>(false) // 是否正在接收流式数据
+const firstSend = ref<boolean>(false) // 是否是第一次发送消息
+const conversation_id = ref<string>('') // 会话id
+const cur_chat_id = ref<string>('') // 当前对话的id
+const isCancelled = ref<boolean>(false) // 是否取消了流式数据输出
 
 const handleSendMessage = async () => {
   const query = inputMessage.value.trim()
   if (!query) return
   console.log(query)
+
+  // 第一次发送消息时，创建会话，更新一些状态变量
+  if (!firstSend.value) {
+    const conversation_result = await createConversation()
+    conversation_id.value = conversation_result.id
+    firstSend.value = true
+    showTip.value = false
+    isFixed.value = true
+  }
+
   messages.value.push({ role: 'user', content: query })
-  showTip.value = false
-  isFixed.value = true
   inputMessage.value = ''
 
   // 重置当前回答和流式状态
   currentAnswer.value = ''
   isStreaming.value = true
+  isCancelled.value = false // 发起新对话时重置取消标志位
 
   await streamingChat({
     query,
+    conversation_id: conversation_id.value,
     callback: (data) => {
-      if (data.role === 'assistant') {
+      if (data.role === 'assistant' && !isCancelled.value) {
+        // 检查取消标志位
         currentAnswer.value += data.content || ''
       }
     },
+    onChatCreated(chat_id) {
+      cur_chat_id.value = chat_id
+      console.log('chat created:', chat_id)
+    },
+    isCancelled: () => isCancelled.value,
   })
 
   // 流式对话结束后，将完整的回答添加到消息列表
+  if (!isCancelled.value) {
+    messages.value.push({ role: 'assistant', content: currentAnswer.value })
+    isStreaming.value = false
+  }
+}
+
+const handleStopStreaming = async () => {
+  isCancelled.value = true // 设置取消标志位
+  const result = await cancelstreamingChat({
+    conversation_id: conversation_id.value,
+    chat_id: cur_chat_id.value,
+  })
+  console.log('canceled chat info:', result)
   messages.value.push({ role: 'assistant', content: currentAnswer.value })
+  currentAnswer.value = ''
   isStreaming.value = false
 }
 
@@ -241,6 +280,18 @@ const handleUploadAttach = () => {
               justify-content: center;
               align-items: center;
               cursor: pointer;
+            }
+
+            .stop {
+              background-color: rgb(113 113 122);
+              border-radius: 50%;
+            }
+
+            .box {
+              width: 12px;
+              height: 12px;
+              margin: 1px;
+              background: #ccc;
             }
 
             .attach {
