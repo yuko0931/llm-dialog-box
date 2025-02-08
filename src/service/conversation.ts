@@ -31,6 +31,7 @@ async function clearConversation(conversation_id: string) {
 }
 
 /***************** 会话中消息相关接口 *****************/
+// 创建消息
 async function createMessage({
   conversation_id,
   role,
@@ -51,10 +52,17 @@ async function createMessage({
   return message
 }
 
+// 获取指定会话的消息列表
+async function getMessageList(conversation_id: string) {
+  const messages = await client.conversations.messages.list(conversation_id)
+  return messages
+}
+
 export {
   createConversation,
   getConversationInfo,
   getConversationList,
   clearConversation,
   createMessage,
+  getMessageList,
 }
