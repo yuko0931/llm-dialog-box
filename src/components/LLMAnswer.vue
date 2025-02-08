@@ -4,9 +4,10 @@
       <img src="../assets/logo.svg" alt="llm logo" loading="lazy" />
     </div>
     <div class="answer-wrapper">
-      <div class="answer-content">
+      <!-- <div class="answer-content">
         {{ answer }}
-      </div>
+      </div> -->
+      <div class="answer-content" v-html="compiledAnswer"></div>
       <div class="func-btn">
         <!-- <img src="../assets/img/like.svg" alt="喜欢" loading="lazy" @click="$emit('like')">
         <img src="../assets/img/dislike.svg" alt="不喜欢" loading="lazy" @click="$emit('dislike')"> -->
@@ -122,10 +123,17 @@
 </template>
 
 <script setup lang="ts">
-defineProps({
+import { computed } from 'vue'
+import { marked } from 'marked'
+
+const props = defineProps({
   answer: {
     type: String,
   },
+})
+
+const compiledAnswer = computed(() => {
+  return marked.parse(props.answer as string)
 })
 
 const copyText = (text: string | undefined) => {
@@ -164,13 +172,25 @@ const copyText = (text: string | undefined) => {
     flex-direction: column;
     width: 100%;
     padding: 0.625rem 1.25rem;
-    white-space: pre-wrap;
-    word-break: break-word;
     color: #f8faff;
     border-radius: 14px;
     background-color: rgba(50, 50, 50, 0.85);
     font-size: 16px;
     line-height: 28px;
+
+    .answer-content > :first-child {
+      margin-top: 0 !important;
+    }
+
+    :deep(.answer-content) {
+      code {
+        font-size: 0.875em;
+        font-weight: 600;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+        background-color: #424242;
+      }
+    }
 
     .func-btn {
       display: flex;

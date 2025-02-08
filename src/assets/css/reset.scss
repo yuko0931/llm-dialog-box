@@ -1,25 +1,5 @@
 body,
-html,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-ul,
-ol,
-li,
-dl,
-dt,
-dd,
-header,
-menu,
-section,
-p,
-input,
-td,
-th,
-ins {
+html {
   padding: 0;
   margin: 0;
 }
@@ -31,11 +11,6 @@ a {
 
 img {
   vertical-align: top;
-}
-
-ul,
-li {
-  list-style: none;
 }
 
 button {
