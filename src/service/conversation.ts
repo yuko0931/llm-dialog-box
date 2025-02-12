@@ -32,21 +32,16 @@ async function clearConversation(conversation_id: string) {
 
 /***************** 会话中消息相关接口 *****************/
 // 创建消息
-async function createMessage({
-  conversation_id,
-  role,
-  content_type,
-  query,
-}: {
-  conversation_id: string
-  role: RoleType
-  content_type: ContentType
-  query: string
-}) {
+async function createMessage(
+  conversation_id: string,
+  role: RoleType,
+  content_type: ContentType,
+  query: string,
+) {
   const message = await client.conversations.messages.create(conversation_id, {
-    role,
-    content_type,
+    role: role,
     content: query,
+    content_type: content_type,
     meta_data: {},
   })
   return message
@@ -58,6 +53,33 @@ async function getMessageList(conversation_id: string) {
   return messages
 }
 
+// 查看消息详情
+async function getMessageInfo(conversation_id: string, message_id: string) {
+  const message = await client.conversations.messages.retrieve(conversation_id, message_id)
+  return message
+}
+
+// 修改消息
+async function updateMessage(
+  conversation_id: string,
+  message_id: string,
+  content_type: ContentType,
+  query: string,
+) {
+  const message = await client.conversations.messages.update(conversation_id, message_id, {
+    meta_data: {},
+    content: query,
+    content_type: content_type,
+  })
+  return message
+}
+
+// 删除消息
+async function deleteMessage(conversation_id: string, message_id: string) {
+  const result = await client.conversations.messages.delete(conversation_id, message_id)
+  return result
+}
+
 export {
   createConversation,
   getConversationInfo,
@@ -65,4 +87,7 @@ export {
   clearConversation,
   createMessage,
   getMessageList,
+  getMessageInfo,
+  updateMessage,
+  deleteMessage,
 }
