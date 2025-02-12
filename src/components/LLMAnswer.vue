@@ -4,14 +4,8 @@
       <img src="../assets/logo.svg" alt="llm logo" loading="lazy" />
     </div>
     <div class="answer-wrapper">
-      <!-- <div class="answer-content">
-        {{ answer }}
-      </div> -->
       <div class="answer-content" v-html="compiledAnswer"></div>
-      <div class="func-btn">
-        <!-- <img src="../assets/img/like.svg" alt="喜欢" loading="lazy" @click="$emit('like')">
-        <img src="../assets/img/dislike.svg" alt="不喜欢" loading="lazy" @click="$emit('dislike')"> -->
-        <!-- <img src="../assets/img/regenerate.svg" alt='重新生成' loading="lazy" @click="$emit('regenerate')"> -->
+      <div class="func-btn" v-show="!isStreaming">
         <div class="copy btn" @click="copyText(answer)">
           <svg
             viewBox="0 0 20 20"
@@ -60,7 +54,8 @@
             </g>
           </svg>
         </div>
-        <div class="regenerate btn" @click="$emit('regenerate')">
+        <!-- 只对最后一个回答渲染重新生成按钮 -->
+        <div class="regenerate btn" v-show="isLast" @click="isRegenerate = !isRegenerate">
           <svg
             viewBox="0 0 20 20"
             fill="none"
@@ -127,6 +122,11 @@ import { computed, onMounted } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github-dark.css'
+import { useStore } from '@/stores/index'
+import { storeToRefs } from 'pinia'
+
+const store = useStore()
+const { isRegenerate } = storeToRefs(store)
 
 declare global {
   interface Window {
@@ -136,6 +136,12 @@ declare global {
 const props = defineProps({
   answer: {
     type: String,
+  },
+  isLast: {
+    type: Boolean,
+  },
+  isStreaming: {
+    type: Boolean,
   },
 })
 
