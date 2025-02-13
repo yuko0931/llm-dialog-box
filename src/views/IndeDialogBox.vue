@@ -4,7 +4,7 @@
     <div class="main-wrapper">
       <div class="header">this is header</div>
       <div class="chat-wrapper">
-        <div class="chat-list" v-if="!showTip">
+        <div class="chat-list" v-show="!showTip" ref="chatListRef">
           <div v-for="(message, index) in messages" :key="index">
             <MyQuestion :message="message.content" v-show="message.role === 'user'"></MyQuestion>
             <LLMAnswer
@@ -97,11 +97,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import MyQuestion from '@/components/MyQuestion.vue'
 import LLMAnswer from '@/components/LLMAnswer.vue'
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
-import { createConversation } from '@/service/conversation'
+import { createConversation, getMessageList } from '@/service/conversation'
 import type { chatMessage } from '@/types/index'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
@@ -120,6 +120,8 @@ const firstSend = ref<boolean>(false) // 是否是第一次发送消息
 const conversation_id = ref<string>('') // 会话id
 const cur_chat_id = ref<string>('') // 当前对话的id
 const isCancelled = ref<boolean>(false) // 是否取消了流式数据输出
+const chatListRef = ref<HTMLElement | null>(null) // 获取聊天列表的引用
+const autoScroll = ref<boolean>(true) // 是否自动滚动
 
 const handleSendMessage = async () => {
   const query = inputMessage.value.trim()
@@ -146,6 +148,11 @@ const generateChat = async (query: string) => {
   currentAnswer.value = ''
   isStreaming.value = true
   isCancelled.value = false // 发起新对话时重置取消标志位
+  autoScroll.value = true
+
+  nextTick(() => {
+    chatListRef.value?.scrollTo({ top: chatListRef.value.scrollHeight, behavior: 'smooth' })
+  })
 
   await streamingChat({
     query,
@@ -168,6 +175,9 @@ const generateChat = async (query: string) => {
     messages.value.push({ role: 'assistant', content: currentAnswer.value })
     isStreaming.value = false
   }
+
+  const result = await getMessageList(conversation_id.value)
+  console.log('message list:', result)
 }
 
 const handleStopStreaming = async () => {
@@ -187,6 +197,33 @@ const handleUploadAttach = () => {
   fileInput.value?.click()
 }
 
+// 监听用户滚动
+const handleUserScroll = () => {
+  if (chatListRef.value) {
+    // 判断用户是否手动滚动
+    if (
+      chatListRef.value.scrollTop + chatListRef.value.clientHeight <
+      chatListRef.value.scrollHeight - 30
+    ) {
+      autoScroll.value = false
+    } else {
+      autoScroll.value = true
+    }
+  }
+}
+
+onMounted(() => {
+  if (chatListRef.value) {
+    chatListRef.value.addEventListener('scroll', handleUserScroll)
+  }
+})
+
+onUnmounted(() => {
+  if (chatListRef.value) {
+    chatListRef.value.addEventListener('scroll', handleUserScroll)
+  }
+})
+
 // 监听 isRegenerate 变量，当它变化时，重新生成最后一条消息的回答
 watch(
   () => isRegenerate.value,
@@ -196,6 +233,14 @@ watch(
     await generateChat(query)
   },
 )
+
+// 监听 currentAnswer 变量，当它变化时(开始生成llm回答，自动滚动到底部
+watch(currentAnswer, () => {
+  // 如果自动滚动，则滚动到底部
+  if (chatListRef.value && autoScroll.value) {
+    chatListRef.value.scrollTop = chatListRef.value.scrollHeight
+  }
+})
 </script>
 
 <style lang="scss" scoped>
