@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { storeToRefs } from "pinia";
-import { messageStore } from "@/stores/messageStore";
-import { watch } from "vue"; // 引入 watch
+import { storeToRefs } from 'pinia'
+import { messageStore } from '@/stores/messageStore'
+import { watch } from 'vue' // 引入 watch
 
-const store = messageStore();
-const { changeMessageId } = messageStore();
-const { data, activeMessageId } = storeToRefs(store);
+const store = messageStore()
+const { changeMessageId } = messageStore()
+const { data, activeMessageId } = storeToRefs(store)
 
 // 监听 data 的变化
 watch(data, (newData) => {
-  console.log('[Debug] 会话列表更新:', newData);
-});
+  console.log('[Debug] 会话列表更新:', newData)
+})
 </script>
 
 <template>
@@ -35,12 +35,13 @@ watch(data, (newData) => {
     align-items: center;
     justify-content: center;
     background-color: rgba(77, 107, 254, 0.1);
-    color: #4D6BFE;
+    color: #4d6bfe;
     padding: 10px;
     border-radius: 8px;
     cursor: pointer;
     margin-bottom: 10px;
     transition: background-color 0.3s;
+    overflow: auto;
 
     &:hover {
       background-color: rgba(77, 107, 254, 0.2);
