@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <div class="side">历史会话</div>
+    <Sidebar /> <!-- 使用 Sidebar 组件 -->
     <div class="main-wrapper">
       <div class="header">this is header</div>
       <div class="chat-wrapper">
@@ -24,6 +24,7 @@
             ></LLMAnswer>
           </keep-alive>
         </div>
+         <!--输入框-->
         <div class="input-box" :class="{ fixed: isFixed }">
           <div class="tip" v-if="showTip">有什么可以帮忙的？</div>
           <div class="input-wrapper">
@@ -33,6 +34,7 @@
                 name="input-area"
                 placeholder="请输入要询问的问题"
                 id="input-area"
+                @keydown.enter="handleKeydownEnter"
               ></textarea>
             </div>
             <div class="button-wrapper">
@@ -100,6 +102,7 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import MyQuestion from '@/components/MyQuestion.vue'
 import LLMAnswer from '@/components/LLMAnswer.vue'
+import Sidebar from '@/components/SiderBar.vue' // 导入 Sidebar 组件
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { createConversation, getMessageList } from '@/service/conversation'
 import type { chatMessage } from '@/types/index'
@@ -211,6 +214,14 @@ const handleUserScroll = () => {
     }
   }
 }
+
+// 处理回车键事件
+const handleKeydownEnter = (event: KeyboardEvent) => {
+  if (!event.shiftKey) {
+    event.preventDefault(); // 阻止默认的回车换行行为
+    handleSendMessage(); // 触发发送消息逻辑
+  }
+};
 
 onMounted(() => {
   if (chatListRef.value) {
