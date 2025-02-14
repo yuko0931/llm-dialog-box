@@ -4,7 +4,7 @@ import { MenuFold, MenuUnfold } from '@icon-park/vue-next'
 import CreateMessage from './CreateMessage.vue'
 import HistoryMessage from './HistoryMessage.vue'
 
-const isCollapsed = ref(false)
+const isCollapsed = ref(false) // 控制侧边栏的折叠状态
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
@@ -122,12 +122,14 @@ const toggleSidebar = () => {
 }
 
 .sidebar-content {
-  padding: 20px;
+  padding: 0 20px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .sidebar-header,
 .sidebar-section {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .new-conversation-btn {

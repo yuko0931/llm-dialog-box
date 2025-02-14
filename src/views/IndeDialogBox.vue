@@ -1,8 +1,9 @@
 <template>
   <div class="container">
-    <Sidebar /> <!-- 使用 Sidebar 组件 -->
+    <Sidebar />
+    <!-- 使用 Sidebar 组件 -->
     <div class="main-wrapper">
-      <div class="header">this is header</div>
+      <div class="header">{{ curTitle }}</div>
       <div class="chat-wrapper">
         <div class="chat-list" v-show="!showTip" ref="chatListRef">
           <div v-for="(message, index) in messages" :key="index">
@@ -24,7 +25,7 @@
             ></LLMAnswer>
           </keep-alive>
         </div>
-         <!--输入框-->
+        <!--输入框-->
         <div class="input-box" :class="{ fixed: isFixed }">
           <div class="tip" v-if="showTip">有什么可以帮忙的？</div>
           <div class="input-wrapper">
@@ -110,7 +111,7 @@ import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 
 const store = useStore()
-const { isRegenerate } = storeToRefs(store)
+const { isRegenerate, curTitle, conversationList } = storeToRefs(store)
 
 const inputMessage = ref<string>('') // 输入框的值
 const messages = ref<chatMessage[]>([]) // 消息列表
@@ -135,9 +136,16 @@ const handleSendMessage = async () => {
   if (!firstSend.value) {
     const conversation_result = await createConversation()
     conversation_id.value = conversation_result.id
+    conversationList.value.unshift({
+      title: query,
+      date: new Date(),
+      coversation_id: conversation_result.id,
+    })
+    localStorage.setItem('conversationList', JSON.stringify(conversationList.value))
     firstSend.value = true
     showTip.value = false
     isFixed.value = true
+    curTitle.value = query
   }
 
   messages.value.push({ role: 'user', content: query })
@@ -218,10 +226,10 @@ const handleUserScroll = () => {
 // 处理回车键事件
 const handleKeydownEnter = (event: KeyboardEvent) => {
   if (!event.shiftKey) {
-    event.preventDefault(); // 阻止默认的回车换行行为
-    handleSendMessage(); // 触发发送消息逻辑
+    event.preventDefault() // 阻止默认的回车换行行为
+    handleSendMessage() // 触发发送消息逻辑
   }
-};
+}
 
 onMounted(() => {
   if (chatListRef.value) {
@@ -277,6 +285,13 @@ watch(currentAnswer, () => {
 
     .header {
       height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 24px;
+      overflow: hidden;
     }
 
     .chat-wrapper {

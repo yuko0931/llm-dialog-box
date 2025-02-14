@@ -1,28 +1,22 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { messageStore } from '@/stores/messageStore'
-import { watch } from 'vue' // 引入 watch
+import { useStore } from '@/stores/index'
 
-const store = messageStore()
-const { changeMessageId } = messageStore()
-const { data, activeMessageId } = storeToRefs(store)
-
-// 监听 data 的变化
-watch(data, (newData) => {
-  console.log('[Debug] 会话列表更新:', newData)
-})
+const store = useStore()
+const { changeConversationId } = store
+const { conversationList, activeConversationId } = storeToRefs(store)
 </script>
 
 <template>
   <div class="history-message">
     <ul>
       <li
-        :class="{ active: id === activeMessageId }"
-        v-for="{ id, name } in data"
-        :key="id"
-        @click="changeMessageId(id)"
+        :class="{ active: coversation_id === activeConversationId }"
+        v-for="{ coversation_id, title } in conversationList"
+        :key="coversation_id"
+        @click="changeConversationId(coversation_id)"
       >
-        {{ name }}
+        {{ title }}
       </li>
     </ul>
   </div>
@@ -30,29 +24,6 @@ watch(data, (newData) => {
 
 <style scoped lang="scss">
 .history-message {
-  .new-message-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: rgba(77, 107, 254, 0.1);
-    color: #4d6bfe;
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-bottom: 10px;
-    transition: background-color 0.3s;
-    overflow: auto;
-
-    &:hover {
-      background-color: rgba(77, 107, 254, 0.2);
-    }
-
-    span {
-      margin-left: 8px;
-      font-size: 14px;
-    }
-  }
-
   ul {
     list-style: none;
     padding: 0;
