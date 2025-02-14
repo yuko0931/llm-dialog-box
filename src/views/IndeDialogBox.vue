@@ -106,22 +106,19 @@ import LLMAnswer from '@/components/LLMAnswer.vue'
 import Sidebar from '@/components/SiderBar.vue' // 导入 Sidebar 组件
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { createConversation, getMessageList } from '@/service/conversation'
-import type { chatMessage } from '@/types/index'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 
 const store = useStore()
-const { isRegenerate, curTitle, conversationList } = storeToRefs(store)
+const { isRegenerate, showTip, firstSend, conversation_id, curTitle, messages, conversationList } =
+  storeToRefs(store)
 
 const inputMessage = ref<string>('') // 输入框的值
-const messages = ref<chatMessage[]>([]) // 消息列表
-const showTip = ref<boolean>(true) // 控制 tip 的显示
 const isFixed = ref<boolean>(false) // 控制输入框是否固定在底部
 const fileInput = ref<HTMLInputElement | null>(null) // 获取文件选择框的引用
 const currentAnswer = ref<string>('') // 当前正在构建的llm回答
 const isStreaming = ref<boolean>(false) // 是否正在接收流式数据
-const firstSend = ref<boolean>(false) // 是否是第一次发送消息
-const conversation_id = ref<string>('') // 会话id
+
 const cur_chat_id = ref<string>('') // 当前对话的id
 const isCancelled = ref<boolean>(false) // 是否取消了流式数据输出
 const chatListRef = ref<HTMLElement | null>(null) // 获取聊天列表的引用
