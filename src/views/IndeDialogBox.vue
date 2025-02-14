@@ -1,29 +1,19 @@
 <template>
   <div class="container">
-    <div class="side">历史会话</div>
+    <Sidebar /> <!-- 使用 Sidebar 组件 -->
     <div class="main-wrapper">
       <div class="header">this is header</div>
       <div class="chat-wrapper">
-        <div class="chat-list" v-show="!showTip" ref="chatListRef">
+        <div class="chat-list" v-if="!showTip">
           <div v-for="(message, index) in messages" :key="index">
             <MyQuestion :message="message.content" v-show="message.role === 'user'"></MyQuestion>
-            <LLMAnswer
-              :answer="message.content"
-              v-show="message.role === 'assistant'"
-              :isStreaming="isStreaming"
-              :isLast="index === messages.length - 1"
-            ></LLMAnswer>
+            <LLMAnswer :answer="message.content" v-show="message.role === 'assistant'"></LLMAnswer>
           </div>
-          <!-- 如果正在接收流式数据，显示当前正在构建的llm回答 -->
-          <!-- 使用 keep-alive 缓存流式内容 -->
           <keep-alive>
-            <LLMAnswer
-              :answer="currentAnswer"
-              :isStreaming="isStreaming"
-              v-show="isStreaming"
-            ></LLMAnswer>
+            <LLMAnswer :answer="currentAnswer" v-show="isStreaming"></LLMAnswer>
           </keep-alive>
         </div>
+        <!--输入框-->
         <div class="input-box" :class="{ fixed: isFixed }">
           <div class="tip" v-if="showTip">有什么可以帮忙的？</div>
           <div class="input-wrapper">
@@ -33,6 +23,7 @@
                 name="input-area"
                 placeholder="请输入要询问的问题"
                 id="input-area"
+                @keydown.enter="handleKeydownEnter"
               ></textarea>
             </div>
             <div class="button-wrapper">
@@ -53,7 +44,6 @@
               </div>
               <div
                 class="send btn"
-                v-show="!isStreaming"
                 :class="inputMessage.trim() ? 'active' : ''"
                 @click="handleSendMessage"
               >
@@ -84,9 +74,6 @@
                   ></path>
                 </svg>
               </div>
-              <div class="stop btn" v-show="isStreaming" @click="handleStopStreaming">
-                <div class="box"></div>
-              </div>
             </div>
           </div>
           <div class="bottom-info" v-if="!showTip">内容由 AI 生成，请仔细甄别</div>
@@ -97,150 +84,61 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref } from 'vue'
 import MyQuestion from '@/components/MyQuestion.vue'
 import LLMAnswer from '@/components/LLMAnswer.vue'
-import { streamingChat, cancelstreamingChat } from '@/service/chat'
-import { createConversation, getMessageList } from '@/service/conversation'
+import Sidebar from '@/components/SiderBar.vue' // 导入 Sidebar 组件
+import { streamingChat } from '@/service/chat'
 import type { chatMessage } from '@/types/index'
-import { useStore } from '@/stores/index'
-import { storeToRefs } from 'pinia'
 
-const store = useStore()
-const { isRegenerate } = storeToRefs(store)
-
-const inputMessage = ref<string>('') // 输入框的值
-const messages = ref<chatMessage[]>([]) // 消息列表
-const showTip = ref<boolean>(true) // 控制 tip 的显示
-const isFixed = ref<boolean>(false) // 控制输入框是否固定在底部
-const fileInput = ref<HTMLInputElement | null>(null) // 获取文件选择框的引用
-const currentAnswer = ref<string>('') // 当前正在构建的llm回答
-const isStreaming = ref<boolean>(false) // 是否正在接收流式数据
-const firstSend = ref<boolean>(false) // 是否是第一次发送消息
-const conversation_id = ref<string>('') // 会话id
-const cur_chat_id = ref<string>('') // 当前对话的id
-const isCancelled = ref<boolean>(false) // 是否取消了流式数据输出
-const chatListRef = ref<HTMLElement | null>(null) // 获取聊天列表的引用
-const autoScroll = ref<boolean>(true) // 是否自动滚动
+const inputMessage = ref<string>('')
+const messages = ref<chatMessage[]>([])
+const showTip = ref<boolean>(true)
+const isFixed = ref<boolean>(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+const currentAnswer = ref<string>('')
+const isStreaming = ref<boolean>(false)
 
 const handleSendMessage = async () => {
   const query = inputMessage.value.trim()
   if (!query) return
   console.log(query)
-
-  // 第一次发送消息时，创建会话，更新一些状态变量
-  if (!firstSend.value) {
-    const conversation_result = await createConversation()
-    conversation_id.value = conversation_result.id
-    firstSend.value = true
-    showTip.value = false
-    isFixed.value = true
-  }
-
   messages.value.push({ role: 'user', content: query })
+  showTip.value = false
+  isFixed.value = true
   inputMessage.value = ''
-  await generateChat(query)
-}
 
-// 抽离函数，生成聊天内容
-const generateChat = async (query: string) => {
   // 重置当前回答和流式状态
   currentAnswer.value = ''
   isStreaming.value = true
-  isCancelled.value = false // 发起新对话时重置取消标志位
-  autoScroll.value = true
-
-  nextTick(() => {
-    chatListRef.value?.scrollTo({ top: chatListRef.value.scrollHeight, behavior: 'smooth' })
-  })
 
   await streamingChat({
-    query,
-    conversation_id: conversation_id.value,
-    callback: (data) => {
-      if (data.role === 'assistant' && !isCancelled.value) {
-        // 检查取消标志位
-        currentAnswer.value += data.content || ''
-      }
-    },
-    onChatCreated(chat_id) {
-      cur_chat_id.value = chat_id
-      console.log('chat created:', chat_id)
-    },
-    isCancelled: () => isCancelled.value,
-  })
+  query,
+  conversation_id: '', // 补充会话ID参数
+  isCancelled: () => false, // 添加取消校验函数
+  callback: (data) => {
+    if (data.role === 'assistant') {
+      currentAnswer.value += data.content || ''
+    }
+  },
+})
 
   // 流式对话结束后，将完整的回答添加到消息列表
-  if (!isCancelled.value) {
-    messages.value.push({ role: 'assistant', content: currentAnswer.value })
-    isStreaming.value = false
-  }
-
-  const result = await getMessageList(conversation_id.value)
-  console.log('message list:', result)
-}
-
-const handleStopStreaming = async () => {
-  isCancelled.value = true // 设置取消标志位
-  const result = await cancelstreamingChat({
-    conversation_id: conversation_id.value,
-    chat_id: cur_chat_id.value,
-  })
-  console.log('canceled chat info:', result)
   messages.value.push({ role: 'assistant', content: currentAnswer.value })
-  currentAnswer.value = ''
   isStreaming.value = false
 }
-
 const handleUploadAttach = () => {
   console.log('上传附件中')
   fileInput.value?.click()
 }
 
-// 监听用户滚动
-const handleUserScroll = () => {
-  if (chatListRef.value) {
-    // 判断用户是否手动滚动
-    if (
-      chatListRef.value.scrollTop + chatListRef.value.clientHeight <
-      chatListRef.value.scrollHeight - 30
-    ) {
-      autoScroll.value = false
-    } else {
-      autoScroll.value = true
-    }
+// 处理回车键事件
+const handleKeydownEnter = (event: KeyboardEvent) => {
+  if (!event.shiftKey) {
+    event.preventDefault(); // 阻止默认的回车换行行为
+    handleSendMessage(); // 触发发送消息逻辑
   }
-}
-
-onMounted(() => {
-  if (chatListRef.value) {
-    chatListRef.value.addEventListener('scroll', handleUserScroll)
-  }
-})
-
-onUnmounted(() => {
-  if (chatListRef.value) {
-    chatListRef.value.addEventListener('scroll', handleUserScroll)
-  }
-})
-
-// 监听 isRegenerate 变量，当它变化时，重新生成最后一条消息的回答
-watch(
-  () => isRegenerate.value,
-  async () => {
-    const query = messages.value[messages.value.length - 2].content
-    messages.value.pop()
-    await generateChat(query)
-  },
-)
-
-// 监听 currentAnswer 变量，当它变化时(开始生成llm回答，自动滚动到底部
-watch(currentAnswer, () => {
-  // 如果自动滚动，则滚动到底部
-  if (chatListRef.value && autoScroll.value) {
-    chatListRef.value.scrollTop = chatListRef.value.scrollHeight
-  }
-})
+};
 </script>
 
 <style lang="scss" scoped>
@@ -248,13 +146,6 @@ watch(currentAnswer, () => {
   display: flex;
   width: 100%;
   height: 100%;
-
-  .side {
-    width: 260px;
-    height: 100%;
-    background-color: #171717;
-    color: #fff;
-  }
 
   .main-wrapper {
     flex: 1 1 0%;
@@ -285,7 +176,6 @@ watch(currentAnswer, () => {
         flex-flow: column nowrap;
         align-items: center;
         overflow: auto;
-        border: none;
 
         div {
           width: 100%;

@@ -1,0 +1,14 @@
+.create-message {
+  padding-bottom: 35px;
+  > div {
+    width: 124px;
+    height: 44px;
+    background-color: #4d6bfe;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+  }
+}
