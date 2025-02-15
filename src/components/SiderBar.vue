@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { MenuFold, MenuUnfold } from '@icon-park/vue-next'
-import CreateMessage from './CreateMessage.vue'
 import HistoryMessage from './HistoryMessage.vue'
+import { storeToRefs } from 'pinia'
+import { useStore } from '@/stores/index'
 
+const store = useStore()
+const { showTip, curTitle, activeConversationId, firstSend, messages } = storeToRefs(store)
 const isCollapsed = ref(false) // 控制侧边栏的折叠状态
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
+}
+
+const createNewConversation = () => {
+  // 通过重置状态来实现
+  showTip.value = true
+  curTitle.value = ''
+  activeConversationId.value = ''
+  firstSend.value = false
+  messages.value = []
 }
 </script>
 
@@ -20,8 +32,11 @@ const toggleSidebar = () => {
     </div>
 
     <div class="create-btn">
-      <CreateMessage v-if="!isCollapsed" style="padding-left: 14px" />
-      <div class="collapsed-btn" v-else>
+      <!-- <CreateMessage v-if="!isCollapsed" style="padding-left: 14px" /> -->
+      <div class="create-message" v-if="!isCollapsed">
+        <div @click="createNewConversation">开启新对话</div>
+      </div>
+      <div class="collapsed-btn" v-else @click="createNewConversation">
         <svg
           viewBox="0 0 30 30"
           fill="none"
@@ -91,7 +106,23 @@ const toggleSidebar = () => {
   flex-direction: column;
   background-color: #171717;
   color: #fff;
-  transition: width 0.3s ease;
+  transition: 0.5s transform;
+
+  .create-message {
+    padding: 0 0 15px 15px;
+
+    div {
+      width: 124px;
+      height: 44px;
+      background-color: #4d6bfe;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 10px;
+    }
+  }
 }
 
 .sidebar-toggle {
@@ -113,6 +144,7 @@ const toggleSidebar = () => {
   .collapsed-btn {
     display: flex;
     justify-content: center;
+    cursor: pointer;
   }
 
   svg {

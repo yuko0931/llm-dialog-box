@@ -41,7 +41,7 @@ const switch2ConversationId = async (coversation_id: string) => {
         else return 1
       }),
     )
-  console.log('coversation messages:', sortedData)
+  // console.log('coversation messages:', sortedData)
   // 更新消息列表和标题
   curTitle.value = conversationList.value.find(
     (item) => item.coversation_id === coversation_id,
