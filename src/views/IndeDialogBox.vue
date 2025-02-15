@@ -7,7 +7,12 @@
       <div class="chat-wrapper">
         <div class="chat-list" v-show="!showTip" ref="chatListRef">
           <div v-for="(message, index) in messages" :key="index">
-            <MyQuestion :message="message.content" v-show="message.role === 'user'"></MyQuestion>
+            <MyQuestion
+              :message="message.content"
+              v-show="message.role === 'user'"
+              @generate-chat="generateChat"
+            >
+            </MyQuestion>
             <LLMAnswer
               :answer="message.content"
               v-show="message.role === 'assistant'"
@@ -110,8 +115,16 @@ import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 
 const store = useStore()
-const { isRegenerate, showTip, firstSend, conversation_id, curTitle, messages, conversationList } =
-  storeToRefs(store)
+const {
+  isRegenerate,
+  showTip,
+  firstSend,
+  conversation_id,
+  curTitle,
+  messages,
+  detailMessageList,
+  conversationList,
+} = storeToRefs(store)
 
 const inputMessage = ref<string>('') // 输入框的值
 const isFixed = ref<boolean>(false) // 控制输入框是否固定在底部
@@ -145,7 +158,7 @@ const handleSendMessage = async () => {
     curTitle.value = query
   }
 
-  messages.value.push({ role: 'user', content: query })
+  messages.value.push({ role: 'user', content: query, content_type: 'text' })
   inputMessage.value = ''
   await generateChat(query)
 }
@@ -180,12 +193,13 @@ const generateChat = async (query: string) => {
 
   // 流式对话结束后，将完整的回答添加到消息列表
   if (!isCancelled.value) {
-    messages.value.push({ role: 'assistant', content: currentAnswer.value })
+    messages.value.push({ role: 'assistant', content: currentAnswer.value, content_type: 'text' })
     isStreaming.value = false
   }
 
   const result = await getMessageList(conversation_id.value)
-  console.log('message list:', result)
+  detailMessageList.value = result.data
+  console.log('coversation messages:', detailMessageList.value)
 }
 
 const handleStopStreaming = async () => {
@@ -195,7 +209,7 @@ const handleStopStreaming = async () => {
     chat_id: cur_chat_id.value,
   })
   console.log('canceled chat info:', result)
-  messages.value.push({ role: 'assistant', content: currentAnswer.value })
+  messages.value.push({ role: 'assistant', content: currentAnswer.value, content_type: 'text' })
   currentAnswer.value = ''
   isStreaming.value = false
 }

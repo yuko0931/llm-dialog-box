@@ -2,6 +2,7 @@
 export interface chatMessage {
   role: 'user' | 'assistant'
   content: string
+  content_type: 'text' | 'object_string' | 'card'
 }
 
 // 会话信息类型
