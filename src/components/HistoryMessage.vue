@@ -7,6 +7,7 @@ const store = useStore()
 const { changeConversationId } = store
 const {
   conversationList,
+  detailMessageList,
   showTip,
   firstSend,
   conversation_id,
@@ -19,6 +20,8 @@ import { getMessageList } from '@/service/conversation'
 const switch2ConversationId = async (coversation_id: string) => {
   changeConversationId(coversation_id) // 切换会话
   const result = await getMessageList(coversation_id) // 获取消息列表
+  detailMessageList.value = result.data
+  console.log('coversation messages:', detailMessageList.value)
   if (showTip.value) {
     showTip.value = false
   }
@@ -50,6 +53,7 @@ const switch2ConversationId = async (coversation_id: string) => {
     return {
       role: item.role,
       content: item.content,
+      content_type: item.content_type,
     }
   })
 }
