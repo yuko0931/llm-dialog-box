@@ -91,7 +91,6 @@ const createNewConversation = () => {
     <div v-show="!isCollapsed" class="sidebar-content">
       <!-- 历史对话列表 -->
       <div class="sidebar-section">
-        <h3>历史对话</h3>
         <HistoryMessage v-if="!isCollapsed" />
       </div>
     </div>
