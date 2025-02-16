@@ -68,7 +68,7 @@ const switch2ConversationId = async (coversation_id: string) => {
         :key="coversation_id"
         @click="switch2ConversationId(coversation_id)"
       >
-        {{ title }}
+        <div>{{ title }}</div>
       </li>
     </ul>
   </div>
@@ -83,8 +83,16 @@ const switch2ConversationId = async (coversation_id: string) => {
 
     li {
       padding: 10px;
+      border-radius: 10px;
       cursor: pointer;
       transition: background-color 0.3s;
+
+      div {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: clip;
+      }
 
       &:hover {
         background-color: rgba(77, 107, 254, 0.1);

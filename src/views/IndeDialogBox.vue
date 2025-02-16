@@ -146,8 +146,11 @@ const handleSendMessage = async () => {
   if (!firstSend.value) {
     const conversation_result = await createConversation()
     conversation_id.value = conversation_result.id
+    if (!curTitle.value) {
+      curTitle.value = query.length > 30 ? `${query.substring(0, 30)}` : query
+    }
     conversationList.value.unshift({
-      title: query,
+      title: curTitle.value,
       date: new Date(),
       coversation_id: conversation_result.id,
     })
@@ -155,9 +158,6 @@ const handleSendMessage = async () => {
     firstSend.value = true
     showTip.value = false
     isFixed.value = true
-    if (!curTitle.value) {
-      curTitle.value = query.length > 30 ? `${query.substring(0, 30)}...` : query
-    }
   }
 
   messages.value.push({ role: 'user', content: query, content_type: 'text' })
