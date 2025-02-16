@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useStore } from '@/stores/index'
 import { type ChatV3Message } from '@coze/api'
@@ -17,6 +17,8 @@ const {
   messages,
 } = storeToRefs(store)
 import { getMessageList } from '@/service/conversation'
+
+const hoveredCoversationId = ref<string>('') // 存储当前悬停的会话ID
 
 const resetDate = (date: Date): Date => {
   const newDate = new Date(date) // 避免修改原日期对象
@@ -98,12 +100,30 @@ const switch2ConversationId = async (coversation_id: string) => {
       <div class="group-title">{{ groupName }}</div>
       <ul>
         <li
+          class="conversation-item"
           :class="{ active: coversation_id === activeConversationId }"
           v-for="{ coversation_id, title } in items"
           :key="coversation_id"
           @click="switch2ConversationId(coversation_id)"
+          @mouseenter="hoveredCoversationId = coversation_id"
+          @mouseleave="hoveredCoversationId = ''"
         >
-          <div>{{ title }}</div>
+          <div class="conversation-title">{{ title }}</div>
+          <div
+            class="more-btn"
+            v-show="
+              coversation_id === activeConversationId || hoveredCoversationId === coversation_id
+            "
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                fill-rule="evenodd"
+                d="M3 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0m7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0m7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+          </div>
         </li>
       </ul>
     </div>
@@ -115,7 +135,6 @@ const switch2ConversationId = async (coversation_id: string) => {
   .group-title {
     background-color: #171717;
     color: #555;
-    margin: 6px 0;
     font-size: 13px;
     font-weight: 600;
     line-height: 18px;
@@ -128,18 +147,47 @@ const switch2ConversationId = async (coversation_id: string) => {
     padding: 0;
     margin: 0;
 
-    li {
-      padding: 10px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background-color 0.3s;
+    > :last-child {
+      margin-bottom: 6px;
+    }
 
-      div {
-        max-width: 200px;
+    .conversation-item {
+      display: flex;
+      align-items: center;
+
+      .conversation-title {
+        flex: 1;
+        line-height: 24px;
+        font-size: 14px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: clip;
       }
+
+      .more-btn {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+
+        &:hover {
+          background-color: #44444d;
+        }
+
+        svg {
+          height: 16px;
+          width: 16px;
+        }
+      }
+    }
+
+    li {
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s;
 
       &:hover {
         background-color: rgba(77, 107, 254, 0.1);
