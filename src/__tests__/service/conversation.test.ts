@@ -7,11 +7,11 @@ import {
   getMessageInfo,
   updateMessage,
   deleteMessage,
-} from '../service/conversation'
-import { client } from '../service/client'
+} from '../../service/conversation'
+import { client } from '../../service/client'
 import { RoleType } from '@coze/api'
 
-vi.mock('../service/client', () => ({
+vi.mock('../../service/client', () => ({
   client: {
     conversations: {
       create: vi.fn(),
