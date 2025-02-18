@@ -34,6 +34,11 @@
         <div class="input-box" :class="{ fixed: isFixed }">
           <div class="tip" v-if="showTip">有什么可以帮忙的？</div>
           <div class="input-wrapper">
+            <div class="filearea-wrapper" v-if="uploadFiles.length > 0">
+              <div v-for="(file, index) in uploadFiles" :key="index">
+                <UploadFileView :name="file.name" :size="file.size" :isparsing="file.isparsing" />
+              </div>
+            </div>
             <div class="textarea-wrapper">
               <textarea
                 v-model="inputMessage"
@@ -44,14 +49,15 @@
               ></textarea>
             </div>
             <div class="button-wrapper">
+              <input
+                ref="fileInput"
+                type="file"
+                multiple
+                accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.csv,.jpg,.png,.gif,.webp,.bmp,.pcd,.tiff"
+                style="display: none"
+                @change="handleFileChange"
+              />
               <div class="attach btn" @click="handleUploadAttach">
-                <input
-                  ref="fileInput"
-                  type="file"
-                  multiple
-                  accept=".pdf,.png,.jpg,.jpeg,.svg,.svgz,.bmp,.gif,.webp,.ico,.xbm,.dib,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md"
-                  style="display: none"
-                />
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 20" fill="none">
                   <path
                     d="M7 20c-1.856-.002-3.635-.7-4.947-1.94C.74 16.819.003 15.137 0 13.383V4.828a4.536 4.536 0 0 1 .365-1.843 4.75 4.75 0 0 1 1.087-1.567A5.065 5.065 0 0 1 3.096.368a5.293 5.293 0 0 1 3.888 0c.616.244 1.174.6 1.643 1.05.469.45.839.982 1.088 1.567.25.586.373 1.212.364 1.843v8.555a2.837 2.837 0 0 1-.92 2.027A3.174 3.174 0 0 1 7 16.245c-.807 0-1.582-.3-2.158-.835a2.837 2.837 0 0 1-.92-2.027v-6.22a1.119 1.119 0 1 1 2.237 0v6.22a.777.777 0 0 0 .256.547.868.868 0 0 0 .585.224c.219 0 .429-.08.586-.224a.777.777 0 0 0 .256-.546V4.828A2.522 2.522 0 0 0 7.643 3.8a2.64 2.64 0 0 0-.604-.876 2.816 2.816 0 0 0-.915-.587 2.943 2.943 0 0 0-2.168 0 2.816 2.816 0 0 0-.916.587 2.64 2.64 0 0 0-.604.876 2.522 2.522 0 0 0-.198 1.028v8.555c0 1.194.501 2.339 1.394 3.183A4.906 4.906 0 0 0 7 17.885a4.906 4.906 0 0 0 3.367-1.319 4.382 4.382 0 0 0 1.395-3.183v-6.22a1.119 1.119 0 0 1 2.237 0v6.22c-.002 1.754-.74 3.436-2.052 4.677C10.635 19.3 8.856 19.998 7 20z"
@@ -109,10 +115,14 @@ import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import MyQuestion from '@/components/MyQuestion.vue'
 import LLMAnswer from '@/components/LLMAnswer.vue'
 import Sidebar from '@/components/SiderBar.vue' // 导入 Sidebar 组件
+import UploadFileView from '@/components/UploadFileView.vue'
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { createConversation, getMessageList } from '@/service/conversation'
+import { uploadFile } from '@/service/file'
+import { formatFileSize } from '@/utils/index'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
+import type { uploadFileItem } from '@/types/index'
 
 const store = useStore()
 const {
@@ -136,6 +146,8 @@ const cur_chat_id = ref<string>('') // 当前对话的id
 const isCancelled = ref<boolean>(false) // 是否取消了流式数据输出
 const chatListRef = ref<HTMLElement | null>(null) // 获取聊天列表的引用
 const autoScroll = ref<boolean>(true) // 是否自动滚动
+
+const uploadFiles = ref<uploadFileItem[]>([]) // 上传的文件列表
 
 const handleSendMessage = async () => {
   const query = inputMessage.value.trim()
@@ -219,6 +231,36 @@ const handleStopStreaming = async () => {
 const handleUploadAttach = () => {
   console.log('上传附件中')
   fileInput.value?.click()
+}
+
+// 处理文件选择
+const handleFileChange = async () => {
+  if (fileInput.value && fileInput.value.files && fileInput.value.files.length > 0) {
+    const files = Array.from(fileInput.value.files)
+    console.log('文件列表:', files)
+    for (const file of files) {
+      if (uploadFiles.value.find((item) => item.name === file.name)) {
+        console.log('不要上传重复的文件!')
+        continue
+      }
+
+      uploadFiles.value.push({
+        name: file.name,
+        size: formatFileSize(file.size),
+        isparsing: false,
+      })
+      const result = await uploadFile(file)
+      uploadFiles.value = uploadFiles.value.map((item) => {
+        if (item.name === file.name) {
+          item.isparsing = true
+        }
+        return item
+      })
+      console.log('上传文件结果:', result)
+      // 清空文件选择框的值,以便下次选择相同文件时也能触发
+      fileInput.value.value = ''
+    }
+  }
 }
 
 // 监听用户滚动
@@ -363,6 +405,15 @@ watch(currentAnswer, () => {
           display: flex;
           flex-flow: column nowrap;
           overflow: hidden;
+
+          .filearea-wrapper {
+            width: 100%;
+            display: flex;
+            flex-flow: row wrap;
+            justify-content: flex-start;
+            gap: 8px;
+            margin-bottom: 10px;
+          }
 
           .textarea-wrapper {
             width: 100%;
