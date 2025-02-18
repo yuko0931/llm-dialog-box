@@ -11,3 +11,10 @@ export interface conversationInfo {
   date: Date
   coversation_id: string
 }
+
+// 文件上传类型
+export interface uploadFileItem {
+  name: string
+  size: string
+  isparsing: boolean
+}
