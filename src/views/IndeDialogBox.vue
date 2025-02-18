@@ -1,12 +1,18 @@
 <template>
   <div class="container">
-    <Sidebar /> <!-- 使用 Sidebar 组件 -->
+    <Sidebar />
+    <!-- 使用 Sidebar 组件 -->
     <div class="main-wrapper">
-      <div class="header">this is header</div>
+      <div class="header">{{ curTitle }}</div>
       <div class="chat-wrapper">
         <div class="chat-list" v-show="!showTip" ref="chatListRef">
           <div v-for="(message, index) in messages" :key="index">
-            <MyQuestion :message="message.content" v-show="message.role === 'user'"></MyQuestion>
+            <MyQuestion
+              :message="message.content"
+              v-show="message.role === 'user'"
+              @generate-chat="generateChat"
+            >
+            </MyQuestion>
             <LLMAnswer
               :answer="message.content"
               v-show="message.role === 'assistant'"
@@ -24,7 +30,7 @@
             ></LLMAnswer>
           </keep-alive>
         </div>
-         <!--输入框-->
+        <!--输入框-->
         <div class="input-box" :class="{ fixed: isFixed }">
           <div class="tip" v-if="showTip">有什么可以帮忙的？</div>
           <div class="input-wrapper">
@@ -105,22 +111,27 @@ import LLMAnswer from '@/components/LLMAnswer.vue'
 import Sidebar from '@/components/SiderBar.vue' // 导入 Sidebar 组件
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { createConversation, getMessageList } from '@/service/conversation'
-import type { chatMessage } from '@/types/index'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 
 const store = useStore()
-const { isRegenerate } = storeToRefs(store)
+const {
+  isRegenerate,
+  showTip,
+  firstSend,
+  conversation_id,
+  curTitle,
+  messages,
+  detailMessageList,
+  conversationList,
+} = storeToRefs(store)
 
 const inputMessage = ref<string>('') // 输入框的值
-const messages = ref<chatMessage[]>([]) // 消息列表
-const showTip = ref<boolean>(true) // 控制 tip 的显示
 const isFixed = ref<boolean>(false) // 控制输入框是否固定在底部
 const fileInput = ref<HTMLInputElement | null>(null) // 获取文件选择框的引用
 const currentAnswer = ref<string>('') // 当前正在构建的llm回答
 const isStreaming = ref<boolean>(false) // 是否正在接收流式数据
-const firstSend = ref<boolean>(false) // 是否是第一次发送消息
-const conversation_id = ref<string>('') // 会话id
+
 const cur_chat_id = ref<string>('') // 当前对话的id
 const isCancelled = ref<boolean>(false) // 是否取消了流式数据输出
 const chatListRef = ref<HTMLElement | null>(null) // 获取聊天列表的引用
@@ -135,12 +146,21 @@ const handleSendMessage = async () => {
   if (!firstSend.value) {
     const conversation_result = await createConversation()
     conversation_id.value = conversation_result.id
+    if (!curTitle.value) {
+      curTitle.value = query.length > 30 ? `${query.substring(0, 30)}` : query
+    }
+    conversationList.value.unshift({
+      title: curTitle.value,
+      date: new Date(),
+      coversation_id: conversation_result.id,
+    })
+    localStorage.setItem('conversationList', JSON.stringify(conversationList.value))
     firstSend.value = true
     showTip.value = false
     isFixed.value = true
   }
 
-  messages.value.push({ role: 'user', content: query })
+  messages.value.push({ role: 'user', content: query, content_type: 'text' })
   inputMessage.value = ''
   await generateChat(query)
 }
@@ -175,12 +195,13 @@ const generateChat = async (query: string) => {
 
   // 流式对话结束后，将完整的回答添加到消息列表
   if (!isCancelled.value) {
-    messages.value.push({ role: 'assistant', content: currentAnswer.value })
+    messages.value.push({ role: 'assistant', content: currentAnswer.value, content_type: 'text' })
     isStreaming.value = false
   }
 
   const result = await getMessageList(conversation_id.value)
-  console.log('message list:', result)
+  detailMessageList.value = result.data
+  console.log('coversation messages:', detailMessageList.value)
 }
 
 const handleStopStreaming = async () => {
@@ -190,7 +211,7 @@ const handleStopStreaming = async () => {
     chat_id: cur_chat_id.value,
   })
   console.log('canceled chat info:', result)
-  messages.value.push({ role: 'assistant', content: currentAnswer.value })
+  messages.value.push({ role: 'assistant', content: currentAnswer.value, content_type: 'text' })
   currentAnswer.value = ''
   isStreaming.value = false
 }
@@ -218,10 +239,10 @@ const handleUserScroll = () => {
 // 处理回车键事件
 const handleKeydownEnter = (event: KeyboardEvent) => {
   if (!event.shiftKey) {
-    event.preventDefault(); // 阻止默认的回车换行行为
-    handleSendMessage(); // 触发发送消息逻辑
+    event.preventDefault() // 阻止默认的回车换行行为
+    handleSendMessage() // 触发发送消息逻辑
   }
-};
+}
 
 onMounted(() => {
   if (chatListRef.value) {
@@ -277,6 +298,13 @@ watch(currentAnswer, () => {
 
     .header {
       height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 24px;
+      overflow: hidden;
     }
 
     .chat-wrapper {

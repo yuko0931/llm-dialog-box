@@ -37,7 +37,7 @@
     </div>
   </div>
   <div class="edit-container" v-else>
-    <div class="textarea-wrapper">
+    <div class="textarea-wrapper" @keydown.enter="handleKeydownEnter">
       <textarea ref="inputRef" v-model="editedMessage" class="edit-input" placeholder=""></textarea>
     </div>
     <div class="func-btn">
@@ -49,6 +49,11 @@
 
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
+import { useStore } from '@/stores/index'
+import { storeToRefs } from 'pinia'
+import { deleteMessage } from '@/service/conversation'
+const store = useStore()
+const { messages, detailMessageList, conversation_id } = storeToRefs(store)
 
 const questionContent = ref<HTMLDivElement | null>(null) // 用户输入的文本元素引用
 const inputRef = ref<HTMLTextAreaElement | null>(null) // 输入框引用
@@ -59,6 +64,8 @@ const { message } = defineProps<{
   // props
   message: string
 }>()
+
+const emit = defineEmits(['generate-chat'])
 
 // 开始编辑
 const startEditing = () => {
@@ -72,8 +79,33 @@ const startEditing = () => {
 // 保存编辑
 const saveEditing = () => {
   isEditing.value = false
-  // 这里可以触发一个事件，将编辑后的内容传递给父组件
-  console.log('保存编辑内容:', editedMessage.value)
+  const index = messages.value.findIndex((item) => item.content === message)
+  if (index !== -1) {
+    messages.value.splice(index, 2)
+  }
+  const chat_id = detailMessageList.value.find((item) => item.content === message)!.chat_id
+  const deleteMessageId = detailMessageList.value.find((item) => item.content === message)!.id
+  const deleteAnswerId = detailMessageList.value.find(
+    (item) => item.chat_id === chat_id && item.type === 'answer',
+  )!.id
+  // console.log("deleteMessageId:", deleteMessageId)
+  // console.log("deleteAnswerId:", deleteAnswerId)
+  deleteMessage(conversation_id.value, deleteMessageId)
+  deleteMessage(conversation_id.value, deleteAnswerId)
+  messages.value.push({
+    role: 'user',
+    content: editedMessage.value,
+    content_type: 'text',
+  })
+  emit('generate-chat', editedMessage.value)
+}
+
+// 处理回车键事件
+const handleKeydownEnter = (event: KeyboardEvent) => {
+  if (!event.shiftKey) {
+    event.preventDefault() // 阻止默认的回车换行行为
+    saveEditing() // 触发发送消息逻辑
+  }
 }
 
 // 取消编辑
