@@ -22,11 +22,50 @@ import { getMessageList } from '@/service/conversation'
 const hoveredCoversationId = ref<string>('') // 存储当前悬停的会话ID
 const showMoreDialog = ref(false) // 控制更多选项对话框的显示
 const selectedConversation = ref<{ id: string; title: string; position?: { x: number; y: number } } | null>(null) // 当前选中的会话
+const editingId = ref<string>('') // 当前正在编辑的会话ID
+const editingTitle = ref<string>('') // 编辑中的标题
 
 const resetDate = (date: Date): Date => {
   const newDate = new Date(date) // 避免修改原日期对象
   newDate.setHours(0, 0, 0, 0)
   return newDate
+}
+
+// 开始编辑标题
+const startEditing = (coversation_id: string, title: string, event?: MouseEvent) => {
+  event?.stopPropagation()
+  editingId.value = coversation_id
+  editingTitle.value = title
+  nextTick(() => {
+    const titleInput = document.querySelector(`[data-conversation-id="${coversation_id}"] .title-input`) as HTMLInputElement
+    if (titleInput) {
+      titleInput.focus()
+    }
+  })
+}
+
+// 保存编辑的标题
+const saveTitle = (coversation_id: string, event: MouseEvent) => {
+  event.stopPropagation()
+  if (editingTitle.value.trim()) {
+    const conversation = conversationList.value.find(item => item.coversation_id === coversation_id)
+    if (conversation) {
+      conversation.title = editingTitle.value.trim()
+      if (coversation_id === conversation_id.value) {
+        curTitle.value = editingTitle.value.trim()
+      }
+    }
+  }
+  editingId.value = ''
+}
+
+// 处理按键事件
+const handleKeyDown = (event: KeyboardEvent, coversation_id: string) => {
+  if (event.key === 'Enter') {
+    saveTitle(coversation_id, event as unknown as MouseEvent)
+  } else if (event.key === 'Escape') {
+    editingId.value = ''
+  }
 }
 
 // 打开更多选项对话框
@@ -79,6 +118,7 @@ const conversationListGroups = computed(() => {
 })
 // 切换会话
 const switch2ConversationId = async (coversation_id: string) => {
+  if (editingId.value) return // 如果正在编辑标题，不允许切换会话
   changeConversationId(coversation_id) // 切换会话
   const result = await getMessageList(coversation_id) // 获取消息列表
   detailMessageList.value = result.data
@@ -127,14 +167,26 @@ const switch2ConversationId = async (coversation_id: string) => {
       <ul>
         <li
           class="conversation-item"
-          :class="{ active: coversation_id === activeConversationId }"
+          :class="{ active: coversation_id === activeConversationId, editing: editingId === coversation_id }"
           v-for="{ coversation_id, title } in items"
           :key="coversation_id"
+          :data-conversation-id="coversation_id"
           @click="switch2ConversationId(coversation_id)"
           @mouseenter="hoveredCoversationId = coversation_id"
           @mouseleave="hoveredCoversationId = ''"
         >
-          <div class="conversation-title">{{ title }}</div>
+          <div class="conversation-title" @dblclick="startEditing(coversation_id, title, $event)">
+            <input
+              v-if="editingId === coversation_id"
+              v-model="editingTitle"
+              @click.stop
+              @blur="saveTitle(coversation_id, $event)"
+              @keydown="handleKeyDown($event, coversation_id)"
+              class="title-input"
+              ref="titleInput"
+            >
+            <span v-else>{{ title }}</span>
+          </div>
           <div
             class="more-btn"
             v-show="
@@ -146,7 +198,7 @@ const switch2ConversationId = async (coversation_id: string) => {
               <path
                 fill="currentColor"
                 fill-rule="evenodd"
-                d="M3 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0m7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0m7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0"
+                d="M4 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8-2a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm8 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"
                 clip-rule="evenodd"
               ></path>
             </svg>
@@ -154,86 +206,89 @@ const switch2ConversationId = async (coversation_id: string) => {
         </li>
       </ul>
     </div>
-
-    <!-- 更多选项对话框 -->
-    <MoreDialog
-      v-if="selectedConversation"
-      :visible="showMoreDialog"
-      :conversation-id="selectedConversation.id"
-      :title="selectedConversation.title"
-      :position="selectedConversation.position"
-      :on-close="closeMoreDialog"
-    />
   </div>
+  <MoreDialog
+    v-if="showMoreDialog && selectedConversation"
+    :visible="showMoreDialog"
+    :conversation-id="selectedConversation.id"
+    :title="selectedConversation.title"
+    :position="selectedConversation.position"
+    :on-close="closeMoreDialog"
+  />
 </template>
 
 <style scoped lang="scss">
 .history-message {
-  .group-title {
-    background-color: #171717;
-    color: #555;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 18px;
-    position: sticky;
-    top: 0;
+  height: 100%;
+  overflow-y: auto;
+  margin: 0 0 0 -50px;  // 减小负的左外边距，使内容向左移动的幅度更合适
+  padding: 0 10px;
+}
+.group-title {
+  font-size: 12px;
+  color: #888;
+  margin: 12px 0 8px 0;  // 增加上下间距，使分组标题更加明显
+  padding-left: 45px;  // 添加左内边距，使分组标题与会话项对齐
+}
+.conversation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px;
+  margin: 1px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #2a2a2a;
   }
 
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  &.active {
+    background-color: #2a2a2a;
+  }
 
-    > :last-child {
-      margin-bottom: 6px;
+  &.editing {
+    background-color: #3a3a3a;
+    border: 1px solid #4a4a4a;
+  }
+  .conversation-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+
+  .title-input {
+    width: 100%;
+    background-color: #2a2a2a;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #fff;
+    outline: none;
+
+    &:focus {
+      border-color: #1668dc;
+    }
+  }
+
+  .more-btn {
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #3a3a3a;
     }
 
-    .conversation-item {
-      display: flex;
-      align-items: center;
-
-      .conversation-title {
-        flex: 1;
-        line-height: 24px;
-        font-size: 14px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: clip;
-      }
-
-      .more-btn {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 24px;
-        height: 24px;
-        border-radius: 8px;
-
-        &:hover {
-          background-color: #44444d;
-        }
-
-        svg {
-          height: 16px;
-          width: 16px;
-        }
-      }
-    }
-
-    li {
-      padding: 8px 10px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-
-      &:hover {
-        background-color: rgba(77, 107, 254, 0.1);
-      }
-
-      &.active {
-        background-color: #4d6bfe;
-        color: white;
-      }
+    svg {
+      width: 16px;
+      height: 16px;
+      color: #888;
     }
   }
 }

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 import { getMessageList } from '@/service/conversation'
+import DeleteDialog from './DeleteDialog.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -18,34 +19,24 @@ const { conversationList, detailMessageList, showTip, firstSend, conversation_id
 
 // 处理重命名
 const handleRename = () => {
-  const input = prompt('请输入新标题', props.title)
-  if (!input) return
-  if (/^\s+$/.test(input)) {
-    alert('标题不能为空')
-    return
-  }
-  const newTitle = input.trim()
-  renameConversation(props.conversationId, newTitle)
-  // 如果重命名的是当前激活的会话，同步更新当前标题
-  if (props.conversationId === conversation_id.value) {
-    curTitle.value = newTitle
+  // 找到对应的会话元素
+  const conversationElement = document.querySelector(`[data-conversation-id="${props.conversationId}"] .conversation-title`)
+  if (conversationElement) {
+    // 直接触发双击事件处理函数
+    conversationElement.dispatchEvent(new MouseEvent('dblclick', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    }))
   }
   props.onClose()
 }
 
 // 处理删除
-const handleDelete = async () => {
-  if (confirm('确认删除这个会话吗？')) {
-    deleteConversation(props.conversationId)
-    // 获取剩余会话列表中最新的一个会话
-    const remainingConversations = conversationList.value
-    if (remainingConversations.length > 0) {
-      const latestConversation = remainingConversations[0]
-      // 切换到最新的会话
-      await switch2ConversationId(latestConversation.coversation_id)
-    }
-    props.onClose()
-  }
+const showDeleteDialog = ref(false)
+const handleDelete = () => {
+  showDeleteDialog.value = true
+  // 移除立即关闭MoreDialog的逻辑，等待用户在DeleteDialog中确认或取消
 }
 
 const handleClose = (e: MouseEvent) => {
@@ -93,10 +84,10 @@ const switch2ConversationId = async (coversation_id: string) => {
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
+              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+            ></path>
           </svg>
-          <span>重命名</span>
+          重命名
         </div>
         <div class="dialog-option delete" @click="handleDelete">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -105,13 +96,20 @@ const switch2ConversationId = async (coversation_id: string) => {
               stroke-linejoin="round"
               stroke-width="2"
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
+            ></path>
           </svg>
-          <span>删除</span>
+          删除
         </div>
       </div>
     </div>
   </div>
+
+  <DeleteDialog
+    v-if="showDeleteDialog"
+    :visible="showDeleteDialog"
+    :conversation-id="conversationId"
+    :on-close="() => showDeleteDialog = false"
+  />
 </template>
 
 <style scoped lang="scss">
@@ -121,7 +119,7 @@ const switch2ConversationId = async (coversation_id: string) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: transparent;
+  background-color: rgba(0, 0, 0, 0.5);
   z-index: 1000;
 }
 
@@ -162,6 +160,54 @@ const switch2ConversationId = async (coversation_id: string) => {
 
     &:hover {
       background-color: rgba(255, 77, 79, 0.1);
+    }
+  }
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #1f1f1f;
+  border-radius: 8px;
+  padding: 24px;
+  width: 400px;
+  z-index: 1001;
+
+  .confirm-content {
+    margin-bottom: 24px;
+  }
+
+  .confirm-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+
+    button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+
+      &.cancel {
+        background-color: #2a2a2a;
+        color: #fff;
+
+        &:hover {
+          background-color: #3a3a3a;
+        }
+      }
+
+      &.confirm {
+        background-color: #ff4d4f;
+        color: #fff;
+
+        &:hover {
+          background-color: #ff6b6b;
+        }
+      }
     }
   }
 }

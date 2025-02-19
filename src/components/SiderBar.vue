@@ -109,7 +109,6 @@ const createNewConversation = () => {
 
   .create-message {
     padding: 0 0 15px 15px;
-
     div {
       width: 124px;
       height: 44px;
@@ -151,13 +150,20 @@ const createNewConversation = () => {
     width: 24px;
   }
 }
-
 .sidebar-content {
-  padding: 0 20px;
   flex: 1;
-  overflow-y: auto;
-}
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0 15px;
 
+  .sidebar-section {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+}
 .sidebar-header,
 .sidebar-section {
   margin-bottom: 10px;
