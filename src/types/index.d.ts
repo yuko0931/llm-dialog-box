@@ -14,6 +14,7 @@ export interface conversationInfo {
 
 // 文件上传类型
 export interface uploadFileItem {
+  id: string
   name: string
   size: string
   isparsing: boolean

@@ -33,7 +33,7 @@
       <div class="file-name">{{ props.name }}</div>
       <div class="file-size" v-if="isparsing">{{ props.size }}</div>
       <div class="file-size" v-else>解析中...</div>
-      <div class="file-delete" v-show="isHoverd">
+      <div class="file-delete" v-show="isHoverd" @click="handleDeleteFile">
         <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
             fill-rule="evenodd"
@@ -70,6 +70,9 @@ const filepath = computed(() => {
 
 // 接收父组件传递的参数
 const props = defineProps({
+  id: {
+    type: String,
+  },
   name: {
     type: String,
   },
@@ -80,6 +83,14 @@ const props = defineProps({
     type: Boolean,
   },
 })
+// 父组件触发事件
+const emit = defineEmits(['delete-file'])
+
+// 删除文件
+const handleDeleteFile = () => {
+  // 触发父组件事件
+  emit('delete-file', props.name)
+}
 </script>
 
 <style lang="scss" scoped>

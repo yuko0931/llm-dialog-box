@@ -36,7 +36,12 @@
           <div class="input-wrapper">
             <div class="filearea-wrapper" v-if="uploadFiles.length > 0">
               <div v-for="(file, index) in uploadFiles" :key="index">
-                <UploadFileView :name="file.name" :size="file.size" :isparsing="file.isparsing" />
+                <UploadFileView
+                  :name="file.name"
+                  :size="file.size"
+                  :isparsing="file.isparsing"
+                  @delete-file="deleteFile"
+                />
               </div>
             </div>
             <div class="textarea-wrapper">
@@ -245,6 +250,7 @@ const handleFileChange = async () => {
       }
 
       uploadFiles.value.push({
+        id: '',
         name: file.name,
         size: formatFileSize(file.size),
         isparsing: false,
@@ -253,6 +259,7 @@ const handleFileChange = async () => {
       uploadFiles.value = uploadFiles.value.map((item) => {
         if (item.name === file.name) {
           item.isparsing = true
+          item.id = result.id
         }
         return item
       })
@@ -260,6 +267,14 @@ const handleFileChange = async () => {
       // 清空文件选择框的值,以便下次选择相同文件时也能触发
       fileInput.value.value = ''
     }
+  }
+}
+
+// 删除文件
+const deleteFile = (name: string) => {
+  const index = uploadFiles.value.findIndex((item) => item.name === name)
+  if (index !== -1) {
+    uploadFiles.value.splice(index, 1)
   }
 }
 
