@@ -1,4 +1,14 @@
 <template>
+  <div class="file-container">
+    <div class="file-item" v-for="item in files" :key="item.id">
+      <div class="file-view"><img :src="getFilePath(item.name)" alt="file" /></div>
+      <div class="file-detail">
+        <div class="file-name">{{ item.name }}</div>
+        <div class="file-size">{{ item.size }}</div>
+      </div>
+    </div>
+  </div>
+
   <div
     class="question-container"
     v-if="!isEditing"
@@ -52,6 +62,7 @@ import { ref, nextTick } from 'vue'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 import { deleteMessage } from '@/service/conversation'
+import type { uploadFileItem } from '@/types/index'
 const store = useStore()
 const { messages, detailMessageList, conversation_id } = storeToRefs(store)
 
@@ -63,7 +74,17 @@ const editedMessage = ref('') // 编辑后的内容
 const { message } = defineProps<{
   // props
   message: string
+  files: uploadFileItem[]
 }>()
+
+const getFilePath = (name: string) => {
+  const basepath = '/img/'
+  const imageExtensions = ['jpg', 'png', 'gif', 'webp', 'bmp', 'pcd', 'tiff']
+  // 获取文件名后缀（统一转小写
+  const extension = name?.toLowerCase()?.split('.')?.pop() || ''
+  const filetype = imageExtensions.includes(extension) ? 'img' : 'file'
+  return basepath + filetype + '.svg'
+}
 
 const emit = defineEmits(['generate-chat'])
 
@@ -116,6 +137,58 @@ const cancelEditing = () => {
 </script>
 
 <style lang="scss" scoped>
+.file-container {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 0;
+
+  .file-item {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #404045;
+    border-radius: 8px;
+    height: 45px;
+    width: 225px;
+    padding: 9px 6px;
+    display: flex;
+    align-items: center;
+
+    .file-view {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      margin-right: 10px;
+    }
+
+    .file-detail {
+      flex: 1;
+
+      .file-name {
+        min-height: 20px;
+        max-width: 180px;
+        margin: 0;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 20px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .file-size {
+        color: #bbb;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin: 0;
+        font-size: 12px;
+        line-height: 17px;
+        overflow: hidden;
+      }
+    }
+  }
+}
+
 .question-container {
   display: flex;
   justify-content: flex-end;
