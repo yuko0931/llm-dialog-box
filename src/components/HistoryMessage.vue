@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useStore } from '@/stores/index'
 import { type ChatV3Message } from '@coze/api'
+import MoreDialog from './MoreDialog.vue'
 
 const store = useStore()
 const { changeConversationId } = store
@@ -19,12 +20,37 @@ const {
 import { getMessageList } from '@/service/conversation'
 
 const hoveredCoversationId = ref<string>('') // 存储当前悬停的会话ID
+const showMoreDialog = ref(false) // 控制更多选项对话框的显示
+const selectedConversation = ref<{ id: string; title: string; position?: { x: number; y: number } } | null>(null) // 当前选中的会话
 
 const resetDate = (date: Date): Date => {
   const newDate = new Date(date) // 避免修改原日期对象
   newDate.setHours(0, 0, 0, 0)
   return newDate
 }
+
+// 打开更多选项对话框
+const openMoreDialog = (coversation_id: string, title: string, event: MouseEvent) => {
+  event.stopPropagation() // 阻止事件冒泡，避免触发会话切换
+  const target = event.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+  selectedConversation.value = { 
+    id: coversation_id, 
+    title,
+    position: {
+      x: rect.right + 5, // 在按钮右侧显示，留出5px间距
+      y: rect.top
+    }
+  }
+  showMoreDialog.value = true
+}
+
+// 关闭更多选项对话框
+const closeMoreDialog = () => {
+  showMoreDialog.value = false
+  selectedConversation.value = null
+}
+
 // 优化后的分组逻辑（条件顺序调整）
 const groupMap = [
   { check: (num: number) => num === 0, label: '今天' }, // 当天
@@ -114,6 +140,7 @@ const switch2ConversationId = async (coversation_id: string) => {
             v-show="
               coversation_id === activeConversationId || hoveredCoversationId === coversation_id
             "
+            @click="openMoreDialog(coversation_id, title, $event)"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <path
@@ -127,6 +154,16 @@ const switch2ConversationId = async (coversation_id: string) => {
         </li>
       </ul>
     </div>
+
+    <!-- 更多选项对话框 -->
+    <MoreDialog
+      v-if="selectedConversation"
+      :visible="showMoreDialog"
+      :conversation-id="selectedConversation.id"
+      :title="selectedConversation.title"
+      :position="selectedConversation.position"
+      :on-close="closeMoreDialog"
+    />
   </div>
 </template>
 
