@@ -1,4 +1,11 @@
-import { ChatEventType, ChatStatus, type ChatV3Message, RoleType } from '@coze/api'
+import {
+  ChatEventType,
+  ChatStatus,
+  type ChatV3Message,
+  type ObjectStringItem,
+  type ContentType,
+  RoleType,
+} from '@coze/api'
 import { client, botId } from './client'
 
 // 非流式对话
@@ -26,13 +33,15 @@ async function nonStreamingChat({ query }: { query: string }) {
 
 // 流式对话
 async function streamingChat({
-  query,
+  final_query,
+  content_type,
   conversation_id,
   callback,
   onChatCreated,
   isCancelled,
 }: {
-  query: string
+  final_query: string | ObjectStringItem[]
+  content_type: ContentType
   conversation_id: string
   callback?: (v: ChatV3Message) => void
   onChatCreated?: (chatId: string) => void
@@ -45,11 +54,13 @@ async function streamingChat({
     additional_messages: [
       {
         role: RoleType.User,
-        content: query,
-        content_type: 'text',
+        content: final_query,
+        content_type: content_type,
       },
     ],
   })
+
+  console.log('additional_messages: ', final_query, content_type)
 
   for await (const part of v) {
     if (isCancelled()) {

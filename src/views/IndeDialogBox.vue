@@ -9,13 +9,14 @@
           <div v-for="(message, index) in messages" :key="index">
             <MyQuestion
               :message="message.content"
-              v-show="message.role === 'user'"
+              :files="message.files || []"
+              v-if="message.role === 'user'"
               @generate-chat="generateChat"
             >
             </MyQuestion>
             <LLMAnswer
               :answer="message.content"
-              v-show="message.role === 'assistant'"
+              v-else
               :isStreaming="isStreaming"
               :isLast="index === messages.length - 1"
             ></LLMAnswer>
@@ -127,7 +128,9 @@ import { uploadFile } from '@/service/file'
 import { formatFileSize } from '@/utils/index'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
+import { isImageFile } from '@/utils/index'
 import type { uploadFileItem } from '@/types/index'
+import { type ObjectStringItem, type ContentType } from '@coze/api'
 
 const store = useStore()
 const {
@@ -158,6 +161,8 @@ const handleSendMessage = async () => {
   const query = inputMessage.value.trim()
   if (!query) return
   console.log(query)
+  const curUploadFiles = uploadFiles.value
+  uploadFiles.value = []
 
   // 第一次发送消息时，创建会话，更新一些状态变量
   if (!firstSend.value) {
@@ -176,14 +181,23 @@ const handleSendMessage = async () => {
     showTip.value = false
     isFixed.value = true
   }
+  if (curUploadFiles.length > 0) {
+    messages.value.push({
+      role: 'user',
+      content: query,
+      files: curUploadFiles,
+      content_type: 'object_string',
+    })
+  } else {
+    messages.value.push({ role: 'user', content: query, content_type: 'text' })
+  }
 
-  messages.value.push({ role: 'user', content: query, content_type: 'text' })
   inputMessage.value = ''
-  await generateChat(query)
+  await generateChat(query, curUploadFiles)
 }
 
 // 抽离函数，生成聊天内容
-const generateChat = async (query: string) => {
+const generateChat = async (query: string, files: uploadFileItem[]) => {
   // 重置当前回答和流式状态
   currentAnswer.value = ''
   isStreaming.value = true
@@ -194,8 +208,36 @@ const generateChat = async (query: string) => {
     chatListRef.value?.scrollTo({ top: chatListRef.value.scrollHeight, behavior: 'smooth' })
   })
 
+  let content_type: ContentType = 'text'
+  let final_query: string | ObjectStringItem[] = query
+  const multi_query: ObjectStringItem[] = []
+  if (files.length > 0) {
+    content_type = 'object_string'
+    files.forEach((file) => {
+      if (isImageFile(file.name)) {
+        multi_query.push({
+          type: 'image',
+          file_id: file.id,
+        })
+      } else {
+        multi_query.push({
+          type: 'file',
+          file_id: file.id,
+        })
+      }
+    })
+    multi_query.push({
+      type: 'text',
+      text: query,
+    })
+    final_query = multi_query
+  }
+
+  console.log('final_query:', final_query)
+
   await streamingChat({
-    query,
+    final_query,
+    content_type,
     conversation_id: conversation_id.value,
     callback: (data) => {
       if (data.role === 'assistant' && !isCancelled.value) {
@@ -215,10 +257,10 @@ const generateChat = async (query: string) => {
     messages.value.push({ role: 'assistant', content: currentAnswer.value, content_type: 'text' })
     isStreaming.value = false
   }
-
   const result = await getMessageList(conversation_id.value)
   detailMessageList.value = result.data
   console.log('coversation messages:', detailMessageList.value)
+  console.log('cur messages:', messages.value)
 }
 
 const handleStopStreaming = async () => {
@@ -319,7 +361,7 @@ watch(
   async () => {
     const query = messages.value[messages.value.length - 2].content
     messages.value.pop()
-    await generateChat(query)
+    await generateChat(query, uploadFiles.value)
   },
 )
 

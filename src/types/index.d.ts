@@ -2,6 +2,7 @@
 export interface chatMessage {
   role: 'user' | 'assistant'
   content: string
+  files?: uploadFileItem[]
   content_type: 'text' | 'object_string' | 'card'
 }
 
