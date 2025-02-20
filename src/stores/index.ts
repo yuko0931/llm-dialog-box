@@ -26,6 +26,8 @@ export const useStore = defineStore('coversation', () => {
     const index = conversationList.value.findIndex((item) => item.coversation_id === id)
     if (index !== -1) {
       conversationList.value[index].title = title
+      // 保存到本地存储
+      localStorage.setItem('conversationList', JSON.stringify(conversationList.value))
     }
   }
 
@@ -35,6 +37,8 @@ export const useStore = defineStore('coversation', () => {
     const index = conversationList.value.findIndex((item) => item.coversation_id === id)
     if (index !== -1) {
       conversationList.value.splice(index, 1)
+      // 保存到本地存储
+      localStorage.setItem('conversationList', JSON.stringify(conversationList.value))
     }
   }
   return {

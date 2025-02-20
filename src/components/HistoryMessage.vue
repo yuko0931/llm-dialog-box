@@ -6,7 +6,7 @@ import { type ChatV3Message } from '@coze/api'
 import MoreDialog from './MoreDialog.vue'
 
 const store = useStore()
-const { changeConversationId } = store
+const { changeConversationId, renameConversation } = store
 const {
   conversationList,
   detailMessageList,
@@ -51,6 +51,7 @@ const saveTitle = (coversation_id: string, event: MouseEvent) => {
     const conversation = conversationList.value.find(item => item.coversation_id === coversation_id)
     if (conversation) {
       conversation.title = editingTitle.value.trim()
+      renameConversation(coversation_id, editingTitle.value.trim())
       if (coversation_id === conversation_id.value) {
         curTitle.value = editingTitle.value.trim()
       }
@@ -262,18 +263,27 @@ const switch2ConversationId = async (coversation_id: string) => {
 
   .title-input {
     width: 100%;
-    background-color: #2a2a2a;
-    border: 1px solid #4a4a4a;
-    border-radius: 4px;
-    padding: 4px 8px;
+    background-color: #333;
+    border: 2px solid #666;
+    border-radius: 6px;
+    padding: 6px 10px;
     color: #fff;
     outline: none;
+    font-size: 14px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #888;
+      background-color: #383838;
+    }
 
     &:focus {
       border-color: #1668dc;
+      background-color: #383838;
+      border-width: 2px;
+      box-shadow: 0 0 0 3px rgba(22, 104, 220, 0.3);
     }
   }
-
   .more-btn {
     display: flex;
     align-items: center;
@@ -293,3 +303,4 @@ const switch2ConversationId = async (coversation_id: string) => {
   }
 }
 </style>
+
