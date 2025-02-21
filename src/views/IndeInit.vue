@@ -88,7 +88,7 @@ import { formatFileSize } from '@/utils/index'
 import type { uploadFileItem } from '@/types/index'
 
 const store = useStore()
-const { firstSendQuery, firstSendFiles, conversationList, curTitle } = storeToRefs(store)
+const { firstSendQuery, firstSendFiles, conversationList } = storeToRefs(store)
 
 const router = useRouter()
 
@@ -106,14 +106,9 @@ const handleSendMessage = async () => {
 
   const conversation_result = await createConversation()
   const conversation_id = conversation_result.id
-
-  if (!curTitle.value) {
-    curTitle.value = query.length > 30 ? `${query.substring(0, 30)}` : query
-  }
-
   // 更新侧边栏的列表
   conversationList.value.unshift({
-    title: curTitle.value,
+    title: query.length > 30 ? `${query.substring(0, 30)}` : query,
     date: new Date(),
     coversation_id: conversation_result.id,
   })

@@ -7,7 +7,7 @@ import { useStore } from '@/stores/index'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 const store = useStore()
-const { firstSendQuery, firstSendFiles, curTitle, activeConversationId } = storeToRefs(store)
+const { firstSendQuery, firstSendFiles, activeConversationId } = storeToRefs(store)
 const isCollapsed = ref(false) // 控制侧边栏的折叠状态
 
 const toggleSidebar = () => {
@@ -15,7 +15,6 @@ const toggleSidebar = () => {
 }
 
 const createNewConversation = () => {
-  curTitle.value = ''
   firstSendQuery.value = ''
   firstSendFiles.value = []
   activeConversationId.value = ''

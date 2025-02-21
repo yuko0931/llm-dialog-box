@@ -3,23 +3,11 @@ import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useStore } from '@/stores/index'
 import { useRouter } from 'vue-router'
-import { type ChatV3Message } from '@coze/api'
 
 const store = useStore()
 const { changeConversationId } = store
-const {
-  firstSendQuery,
-  firstSendFiles,
-  conversationList,
-  detailMessageList,
-  showTip,
-  firstSend,
-  conversation_id,
-  activeConversationId,
-  curTitle,
-  messages,
-} = storeToRefs(store)
-import { getMessageList } from '@/service/conversation'
+const { firstSendQuery, firstSendFiles, conversationList, conversation_id, activeConversationId } =
+  storeToRefs(store)
 const router = useRouter()
 
 const hoveredCoversationId = ref<string>('') // 存储当前悬停的会话ID
@@ -56,45 +44,11 @@ const conversationListGroups = computed(() => {
   return Object.entries(groups)
 })
 // 切换会话
-const switch2ConversationId = async (coversation_id: string) => {
+const switch2ConversationId = (coversation_id: string) => {
   changeConversationId(coversation_id) // 切换会话
-  const result = await getMessageList(coversation_id) // 获取消息列表
-  detailMessageList.value = result.data
-  console.log('coversation messages:', detailMessageList.value)
-  if (showTip.value) {
-    showTip.value = false
-  }
-  if (!firstSend.value) {
-    firstSend.value = true
-  }
   conversation_id.value = coversation_id
-  // 按 chat_id 分组，组间按 created_at 排序，组内按 type 排序( answer在后 )
-  const sortedData = Object.values(
-    result.data.reduce<Record<string, ChatV3Message[]>>((acc, message) => {
-      ;(acc[message.chat_id] ||= []).push(message)
-      return acc
-    }, {}),
-  )
-    .sort((a, b) => a[0].created_at - b[0].created_at) // 组间排序
-    .flatMap((group) =>
-      group.sort((b, a) => {
-        // 组内排序
-        if (a.type === 'answer') return -1
-        else return 1
-      }),
-    )
-  // console.log('coversation messages:', sortedData)
-  // 更新消息列表和标题
-  curTitle.value = conversationList.value.find(
-    (item) => item.coversation_id === coversation_id,
-  )!.title
-  messages.value = sortedData.map((item) => {
-    return {
-      role: item.role,
-      content: item.content,
-      content_type: item.content_type,
-    }
-  })
+
+  // 变量重置。路由跳转
   firstSendQuery.value = ''
   firstSendFiles.value = []
   router.push({
