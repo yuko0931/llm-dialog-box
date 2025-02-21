@@ -5,7 +5,7 @@
     </div>
     <div class="answer-wrapper">
       <div class="answer-content" v-html="compiledAnswer"></div>
-      <div class="func-btn" v-show="!isStreaming">
+      <div class="func-btn" :style="{ visibility: !isStreaming ? 'visible' : 'hidden' }">
         <div class="copy btn" @click="copyText(answer)">
           <svg
             viewBox="0 0 20 20"
