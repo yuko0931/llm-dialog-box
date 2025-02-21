@@ -4,13 +4,8 @@
       <img src="../assets/logo.svg" alt="llm logo" loading="lazy" />
     </div>
     <div class="answer-wrapper">
-      <div class="answer-content">
-        {{ answer }}
-      </div>
-      <div class="func-btn">
-        <!-- <img src="../assets/img/like.svg" alt="喜欢" loading="lazy" @click="$emit('like')">
-        <img src="../assets/img/dislike.svg" alt="不喜欢" loading="lazy" @click="$emit('dislike')"> -->
-        <!-- <img src="../assets/img/regenerate.svg" alt='重新生成' loading="lazy" @click="$emit('regenerate')"> -->
+      <div class="answer-content" v-html="compiledAnswer"></div>
+      <div class="func-btn" :style="{ visibility: !isStreaming ? 'visible' : 'hidden' }">
         <div class="copy btn" @click="copyText(answer)">
           <svg
             viewBox="0 0 20 20"
@@ -59,7 +54,8 @@
             </g>
           </svg>
         </div>
-        <div class="regenerate btn" @click="$emit('regenerate')">
+        <!-- 只对最后一个回答渲染重新生成按钮 -->
+        <div class="regenerate btn" v-show="isLast" @click="isRegenerate = !isRegenerate">
           <svg
             viewBox="0 0 20 20"
             fill="none"
@@ -122,12 +118,73 @@
 </template>
 
 <script setup lang="ts">
-defineProps({
+import { computed, onMounted } from 'vue'
+import { marked } from 'marked'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github-dark.css'
+import { useStore } from '@/stores/index'
+import { storeToRefs } from 'pinia'
+
+const store = useStore()
+const { isRegenerate } = storeToRefs(store)
+
+declare global {
+  interface Window {
+    copyCode: (button: HTMLElement) => void
+  }
+}
+const props = defineProps({
   answer: {
     type: String,
   },
+  isLast: {
+    type: Boolean,
+  },
+  isStreaming: {
+    type: Boolean,
+  },
 })
 
+// 自定义marked的renderer来处理代码块
+const renderer = new marked.Renderer()
+renderer.code = ({ text, lang }) => {
+  const validLang = !!(lang && hljs.getLanguage(lang))
+  const highlighted = validLang ? hljs.highlight(text, { language: lang }).value : text
+  return `
+    <div class="code-block">
+      <div class="code-header">
+        <span>${lang || ''}</span>
+        <span class="copy-btn" onClick="copyCode(this)">复制</span>
+      </div>
+      <pre><code class="hljs ${lang}">${highlighted}</code></pre>
+    </div>
+  `
+}
+
+// 设置marked使用自定义renderer
+marked.setOptions({
+  renderer: renderer,
+})
+
+const compiledAnswer = computed(() => {
+  return marked.parse(props.answer as string)
+})
+
+onMounted(() => {
+  // 复制代码
+  window.copyCode = function (button: HTMLElement) {
+    const codeBlock = button.parentElement?.nextElementSibling as HTMLElement
+    if (codeBlock) {
+      const code = codeBlock.innerText
+      navigator.clipboard.writeText(code).then(() => {
+        button.textContent = '复制成功'
+        setTimeout(() => {
+          button.textContent = '复制'
+        }, 1000)
+      })
+    }
+  }
+})
 const copyText = (text: string | undefined) => {
   if (text) {
     navigator.clipboard.writeText(text)
@@ -164,13 +221,62 @@ const copyText = (text: string | undefined) => {
     flex-direction: column;
     width: 100%;
     padding: 0.625rem 1.25rem;
-    white-space: pre-wrap;
-    word-break: break-word;
     color: #f8faff;
     border-radius: 14px;
     background-color: rgba(50, 50, 50, 0.85);
     font-size: 16px;
     line-height: 28px;
+
+    .answer-content > :first-child {
+      margin-top: 0 !important;
+    }
+
+    :deep(.answer-content) {
+      .code-block {
+        max-width: 100%;
+        width: 100%;
+        background: #2c2c36;
+        color: #fafafc;
+        border-radius: 6px;
+
+        .code-header {
+          background: #585a73;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0 14px;
+          font-size: 13px;
+          border-top-left-radius: 6px;
+          border-top-right-radius: 6px;
+
+          .copy-btn {
+            cursor: pointer;
+          }
+        }
+
+        pre {
+          padding: 10px 14px;
+          margin: 0;
+        }
+
+        code {
+          background-color: transparent;
+          white-space: pre-wrap;
+          word-break: break-all;
+          margin: 0px;
+          line-height: 1.45;
+          overflow: auto;
+        }
+      }
+
+      code {
+        font-size: 0.875em;
+        font-weight: 600;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+        background-color: #424242;
+      }
+    }
 
     .func-btn {
       display: flex;

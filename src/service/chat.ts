@@ -1,4 +1,11 @@
-import { ChatEventType, ChatStatus, type ChatV3Message, RoleType } from '@coze/api'
+import {
+  ChatEventType,
+  ChatStatus,
+  type ChatV3Message,
+  type ObjectStringItem,
+  type ContentType,
+  RoleType,
+} from '@coze/api'
 import { client, botId } from './client'
 
 // 非流式对话
@@ -26,33 +33,51 @@ async function nonStreamingChat({ query }: { query: string }) {
 
 // 流式对话
 async function streamingChat({
-  query,
+  final_query,
+  content_type,
+  conversation_id,
   callback,
+  onChatCreated,
+  isCancelled,
 }: {
-  query: string
+  final_query: string | ObjectStringItem[]
+  content_type: ContentType
+  conversation_id: string
   callback?: (v: ChatV3Message) => void
+  onChatCreated?: (chatId: string) => void
+  isCancelled: () => boolean
 }) {
   const v = await client.chat.stream({
     bot_id: botId,
-    auto_save_history: false,
+    auto_save_history: true,
+    conversation_id,
     additional_messages: [
       {
         role: RoleType.User,
-        content: query,
-        content_type: 'text',
+        content: final_query,
+        content_type: content_type,
       },
     ],
   })
 
+  console.log('additional_messages: ', final_query, content_type)
+
   for await (const part of v) {
+    if (isCancelled()) {
+      break // 如果取消标志位为 true，终止循环
+    }
     if (part.event === ChatEventType.CONVERSATION_CHAT_CREATED) {
       console.log('[START]')
+      console.log(part.data)
+      if (onChatCreated) {
+        onChatCreated(part.data.id)
+      }
     } else if (part.event === ChatEventType.CONVERSATION_MESSAGE_DELTA) {
       if (callback) {
         callback(part.data)
       }
-      console.log('[DELTA]')
-      console.log(part.data.content)
+      // console.log('[DELTA]')
+      // console.log(part.data.content)
     } else if (part.event === ChatEventType.CONVERSATION_MESSAGE_COMPLETED) {
       const { role, type, content } = part.data
       if (role === 'assistant' && type === 'answer') {
@@ -68,7 +93,6 @@ async function streamingChat({
       console.error(part.data)
     }
   }
-
   console.log('=== End of Streaming Chat ===')
 }
 
@@ -79,7 +103,7 @@ async function cancelstreamingChat({
   conversation_id: string
   chat_id: string
 }) {
-  await client.chat.cancel(conversation_id, chat_id)
+  return await client.chat.cancel(conversation_id, chat_id)
 }
 
 export { nonStreamingChat, streamingChat, cancelstreamingChat }
