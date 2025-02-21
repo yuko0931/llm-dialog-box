@@ -2,11 +2,14 @@
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useStore } from '@/stores/index'
+import { useRouter } from 'vue-router'
 import { type ChatV3Message } from '@coze/api'
 
 const store = useStore()
 const { changeConversationId } = store
 const {
+  firstSendQuery,
+  firstSendFiles,
   conversationList,
   detailMessageList,
   showTip,
@@ -17,6 +20,7 @@ const {
   messages,
 } = storeToRefs(store)
 import { getMessageList } from '@/service/conversation'
+const router = useRouter()
 
 const hoveredCoversationId = ref<string>('') // 存储当前悬停的会话ID
 
@@ -90,6 +94,14 @@ const switch2ConversationId = async (coversation_id: string) => {
       content: item.content,
       content_type: item.content_type,
     }
+  })
+  firstSendQuery.value = ''
+  firstSendFiles.value = []
+  router.push({
+    name: 'chat',
+    params: {
+      conversationdId: coversation_id, // 参数名与路由定义一致
+    },
   })
 }
 </script>

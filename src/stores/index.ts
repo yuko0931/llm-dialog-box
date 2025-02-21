@@ -1,9 +1,13 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { conversationInfo, chatMessage } from '@/types/index'
+import type { conversationInfo, chatMessage, uploadFileItem } from '@/types/index'
 import { type ChatV3Message } from '@coze/api'
 
 export const useStore = defineStore('coversation', () => {
+  const firstSendQuery = ref<string>('')
+  const firstSendFiles = ref<uploadFileItem[]>([])
+  const streamingConversationId = ref<string>('')
+
   const isRegenerate = ref<boolean>(false) // 是否重新生成llm answer
   const showTip = ref<boolean>(true) // 控制 tip 的显示
   const firstSend = ref<boolean>(false) // 是否是第一次发送消息
@@ -38,6 +42,9 @@ export const useStore = defineStore('coversation', () => {
     }
   }
   return {
+    firstSendQuery,
+    firstSendFiles,
+    streamingConversationId,
     isRegenerate,
     showTip,
     firstSend,
