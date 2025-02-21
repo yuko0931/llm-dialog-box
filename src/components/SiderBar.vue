@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { MenuFold, MenuUnfold } from '@icon-park/vue-next'
 import HistoryMessage from './HistoryMessage.vue'
+import Logo from './Logo.vue'
 import { storeToRefs } from 'pinia'
 import { useStore } from '@/stores/index'
 import { useRouter } from 'vue-router'
@@ -28,10 +29,12 @@ const createNewConversation = () => {
 
 <template>
   <div class="sidebar" :class="{ collapsed: isCollapsed }">
-    <!-- 折叠按钮保持原有位置 -->
-    <div class="sidebar-toggle" @click="toggleSidebar">
-      <MenuFold v-if="!isCollapsed" theme="outline" :size="24" />
-      <MenuUnfold v-else theme="outline" :size="24" />
+    <div class="header-container">
+      <Logo :is-collapsed="isCollapsed" />
+      <div class="sidebar-toggle" @click="toggleSidebar">
+        <MenuFold v-if="!isCollapsed" theme="outline" :size="24" />
+        <MenuUnfold v-else theme="outline" :size="24" />
+      </div>
     </div>
 
     <div class="create-btn">
@@ -110,35 +113,58 @@ const createNewConversation = () => {
   color: #fff;
   transition: 0.5s transform;
 
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0;
+  }
+
   .create-message {
-    padding: 0 0 15px 15px;
+    padding: 0 0 12px 12px;
     div {
-      width: 124px;
-      height: 44px;
+      width: 120px;
+      height: 40px;
       background-color: #4d6bfe;
       color: white;
       cursor: pointer;
       display: flex;
       justify-content: center;
       align-items: center;
-      border-radius: 10px;
+      border-radius: 8px;
     }
   }
 }
 
 .sidebar-toggle {
   cursor: pointer;
-  padding: 15px;
+  padding: 10px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 15px;
 }
 
 .collapsed {
   width: 60px;
   display: flex;
+  flex-direction: column;
   align-items: center;
+
+  .header-container {
+    padding: 10px 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .create-btn {
+    padding-top: 0px;
+    padding-left: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
 }
 
 .create-btn {
@@ -158,7 +184,7 @@ const createNewConversation = () => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 0 15px;
+  padding: 0 12px;
 
   .sidebar-section {
     flex: 1;
