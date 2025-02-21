@@ -417,7 +417,11 @@ watch(
   async () => {
     const query = messages.value[messages.value.length - 2].content
     messages.value.pop()
-    await generateChat(query, uploadFiles.value)
+    let files: fileItem[] = []
+    if (messages.value[messages.value.length - 1].content_type === 'object_string') {
+      files = messages.value[messages.value.length - 1].files as fileItem[]
+    }
+    await generateChat(query, files)
   },
 )
 </script>
