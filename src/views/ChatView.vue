@@ -116,7 +116,7 @@ import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { getMessageList } from '@/service/conversation'
 import { uploadFile } from '@/service/file'
-import { formatFileSize, isImageFile } from '@/utils/index'
+import { formatFileSize, isImageFile, returnContent2Files } from '@/utils/index'
 import { useStore } from '@/stores/index'
 import { type ObjectStringItem, type ContentType, type ChatV3Message } from '@coze/api'
 import type { chatMessage, uploadFileItem } from '@/types/index'
@@ -352,11 +352,18 @@ watch(
               else return 1
             }),
           )
+
+        // 多模态的content还需进一步处理
         messages.value = sortedData.map((item) => {
-          return {
-            role: item.role,
-            content: item.content,
-            content_type: item.content_type,
+          if (item.content_type === 'object_string') {
+            const contentList = JSON.parse(item.content)
+            return returnContent2Files(contentList)
+          } else {
+            return {
+              role: item.role,
+              content: item.content,
+              content_type: item.content_type,
+            }
           }
         })
       }

@@ -140,6 +140,8 @@ const cancelEditing = () => {
 .file-container {
   display: flex;
   justify-content: flex-end;
+  flex-flow: row wrap;
+  gap: 10px;
   padding: 10px 0;
 
   .file-item {

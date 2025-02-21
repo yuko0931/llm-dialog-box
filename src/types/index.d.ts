@@ -18,5 +18,5 @@ export interface uploadFileItem {
   id: string
   name: string
   size: string
-  isparsing: boolean
+  isparsing?: boolean
 }
