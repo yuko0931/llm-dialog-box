@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useStore } from '@/stores/index'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { getMessageList } from '@/service/conversation'
 
@@ -9,9 +10,10 @@ const props = defineProps<{
   onClose: () => void
 }>()
 
+const router = useRouter()
 const store = useStore()
 const { deleteConversation, changeConversationId } = store
-const { conversationList, detailMessageList, showTip, firstSend, conversation_id, curTitle, messages } = storeToRefs(store)
+const { conversationList, detailMessageList, conversation_id, messages } = storeToRefs(store)
 
 // 处理删除
 const handleDelete = async () => {
@@ -29,8 +31,8 @@ const handleDelete = async () => {
   document.querySelector('.dialog-overlay')?.dispatchEvent(
     new MouseEvent('click', {
       bubbles: true,
-      cancelable: true
-    })
+      cancelable: true,
+    }),
   )
 }
 
@@ -39,18 +41,15 @@ const switch2ConversationId = async (coversation_id: string) => {
   changeConversationId(coversation_id) // 切换会话
   const result = await getMessageList(coversation_id) // 获取消息列表
   detailMessageList.value = result.data
-  console.log('coversation messages:', detailMessageList.value)
-  if (showTip.value) {
-    showTip.value = false
-  }
-  if (!firstSend.value) {
-    firstSend.value = true
-  }
+
   conversation_id.value = coversation_id
   // 更新消息列表和标题
-  curTitle.value = conversationList.value.find(
-    (item) => item.coversation_id === coversation_id,
-  )!.title
+  router.push({
+    name: 'chat',
+    params: {
+      conversationdId: coversation_id, // 参数名与路由定义一致
+    },
+  })
   messages.value = result.data.map((item) => {
     return {
       role: item.role,

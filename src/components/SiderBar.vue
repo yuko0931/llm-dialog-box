@@ -4,9 +4,10 @@ import { MenuFold, MenuUnfold } from '@icon-park/vue-next'
 import HistoryMessage from './HistoryMessage.vue'
 import { storeToRefs } from 'pinia'
 import { useStore } from '@/stores/index'
-
+import { useRouter } from 'vue-router'
+const router = useRouter()
 const store = useStore()
-const { showTip, curTitle, activeConversationId, firstSend, messages } = storeToRefs(store)
+const { firstSendQuery, firstSendFiles, activeConversationId, messages } = storeToRefs(store)
 const isCollapsed = ref(false) // 控制侧边栏的折叠状态
 
 const toggleSidebar = () => {
@@ -14,12 +15,14 @@ const toggleSidebar = () => {
 }
 
 const createNewConversation = () => {
-  // 通过重置状态来实现
-  showTip.value = true
-  curTitle.value = ''
-  activeConversationId.value = ''
-  firstSend.value = false
+  firstSendQuery.value = ''
+  firstSendFiles.value = []
   messages.value = []
+  activeConversationId.value = ''
+  // 通过路由跳转实现
+  router.push({
+    name: 'init',
+  })
 }
 </script>
 

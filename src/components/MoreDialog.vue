@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useStore } from '@/stores/index'
-import { storeToRefs } from 'pinia'
-import { getMessageList } from '@/service/conversation'
 import DeleteDialog from './DeleteDialog.vue'
 
 const props = defineProps<{
@@ -13,21 +10,21 @@ const props = defineProps<{
   position?: { x: number; y: number }
 }>()
 
-const store = useStore()
-const { renameConversation, deleteConversation, changeConversationId } = store
-const { conversationList, detailMessageList, showTip, firstSend, conversation_id, curTitle, messages } = storeToRefs(store)
-
 // 处理重命名
 const handleRename = () => {
   // 找到对应的会话元素
-  const conversationElement = document.querySelector(`[data-conversation-id="${props.conversationId}"] .conversation-title`)
+  const conversationElement = document.querySelector(
+    `[data-conversation-id="${props.conversationId}"] .conversation-title`,
+  )
   if (conversationElement) {
     // 直接触发双击事件处理函数
-    conversationElement.dispatchEvent(new MouseEvent('dblclick', {
-      bubbles: true,
-      cancelable: true,
-      view: window
-    }))
+    conversationElement.dispatchEvent(
+      new MouseEvent('dblclick', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      }),
+    )
   }
   props.onClose()
 }
@@ -44,42 +41,25 @@ const handleClose = (e: MouseEvent) => {
     props.onClose()
   }
 }
-// 切换会话
-const switch2ConversationId = async (coversation_id: string) => {
-  changeConversationId(coversation_id) // 切换会话
-  const result = await getMessageList(coversation_id) // 获取消息列表
-  detailMessageList.value = result.data
-  console.log('coversation messages:', detailMessageList.value)
-  if (showTip.value) {
-    showTip.value = false
-  }
-  if (!firstSend.value) {
-    firstSend.value = true
-  }
-  conversation_id.value = coversation_id
-  // 更新消息列表和标题
-  curTitle.value = conversationList.value.find(
-    (item) => item.coversation_id === coversation_id,
-  )!.title
-  messages.value = result.data.map((item) => {
-    return {
-      role: item.role,
-      content: item.content,
-      content_type: item.content_type,
-    }
-  })
-}
 </script>
 
 <template>
   <div v-if="visible" class="dialog-overlay" @click="handleClose">
-    <div class="dialog-content" :style="{
-      left: position?.x + 'px',
-      top: position?.y + 'px'
-    }">
+    <div
+      class="dialog-content"
+      :style="{
+        left: position?.x + 'px',
+        top: position?.y + 'px',
+      }"
+    >
       <div class="dialog-options">
         <div class="dialog-option" @click="handleRename">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -90,7 +70,12 @@ const switch2ConversationId = async (coversation_id: string) => {
           重命名
         </div>
         <div class="dialog-option delete" @click="handleDelete">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -108,7 +93,7 @@ const switch2ConversationId = async (coversation_id: string) => {
     v-if="showDeleteDialog"
     :visible="showDeleteDialog"
     :conversation-id="conversationId"
-    :on-close="() => showDeleteDialog = false"
+    :on-close="() => (showDeleteDialog = false)"
   />
 </template>
 

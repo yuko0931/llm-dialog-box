@@ -1,27 +1,23 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useStore } from '@/stores/index'
-import { type ChatV3Message } from '@coze/api'
+import { useRouter } from 'vue-router'
 import MoreDialog from './MoreDialog.vue'
 
 const store = useStore()
 const { changeConversationId, renameConversation } = store
-const {
-  conversationList,
-  detailMessageList,
-  showTip,
-  firstSend,
-  conversation_id,
-  activeConversationId,
-  curTitle,
-  messages,
-} = storeToRefs(store)
-import { getMessageList } from '@/service/conversation'
+const { firstSendQuery, firstSendFiles, conversationList, conversation_id, activeConversationId } =
+  storeToRefs(store)
+const router = useRouter()
 
 const hoveredCoversationId = ref<string>('') // 存储当前悬停的会话ID
 const showMoreDialog = ref(false) // 控制更多选项对话框的显示
-const selectedConversation = ref<{ id: string; title: string; position?: { x: number; y: number } } | null>(null) // 当前选中的会话
+const selectedConversation = ref<{
+  id: string
+  title: string
+  position?: { x: number; y: number }
+} | null>(null) // 当前选中的会话
 const editingId = ref<string>('') // 当前正在编辑的会话ID
 const editingTitle = ref<string>('') // 编辑中的标题
 
@@ -37,7 +33,9 @@ const startEditing = (coversation_id: string, title: string, event?: MouseEvent)
   editingId.value = coversation_id
   editingTitle.value = title
   nextTick(() => {
-    const titleInput = document.querySelector(`[data-conversation-id="${coversation_id}"] .title-input`) as HTMLInputElement
+    const titleInput = document.querySelector(
+      `[data-conversation-id="${coversation_id}"] .title-input`,
+    ) as HTMLInputElement
     if (titleInput) {
       titleInput.focus()
     }
@@ -48,13 +46,12 @@ const startEditing = (coversation_id: string, title: string, event?: MouseEvent)
 const saveTitle = (coversation_id: string, event: MouseEvent) => {
   event.stopPropagation()
   if (editingTitle.value.trim()) {
-    const conversation = conversationList.value.find(item => item.coversation_id === coversation_id)
+    const conversation = conversationList.value.find(
+      (item) => item.coversation_id === coversation_id,
+    )
     if (conversation) {
       conversation.title = editingTitle.value.trim()
       renameConversation(coversation_id, editingTitle.value.trim())
-      if (coversation_id === conversation_id.value) {
-        curTitle.value = editingTitle.value.trim()
-      }
     }
   }
   editingId.value = ''
@@ -74,13 +71,13 @@ const openMoreDialog = (coversation_id: string, title: string, event: MouseEvent
   event.stopPropagation() // 阻止事件冒泡，避免触发会话切换
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
-  selectedConversation.value = { 
-    id: coversation_id, 
+  selectedConversation.value = {
+    id: coversation_id,
     title,
     position: {
       x: rect.right + 5, // 在按钮右侧显示，留出5px间距
-      y: rect.top
-    }
+      y: rect.top,
+    },
   }
   showMoreDialog.value = true
 }
@@ -118,45 +115,19 @@ const conversationListGroups = computed(() => {
   return Object.entries(groups)
 })
 // 切换会话
-const switch2ConversationId = async (coversation_id: string) => {
+const switch2ConversationId = (coversation_id: string) => {
   if (editingId.value) return // 如果正在编辑标题，不允许切换会话
   changeConversationId(coversation_id) // 切换会话
-  const result = await getMessageList(coversation_id) // 获取消息列表
-  detailMessageList.value = result.data
-  console.log('coversation messages:', detailMessageList.value)
-  if (showTip.value) {
-    showTip.value = false
-  }
-  if (!firstSend.value) {
-    firstSend.value = true
-  }
   conversation_id.value = coversation_id
-  // 按 chat_id 分组，组间按 created_at 排序，组内按 type 排序( answer在后 )
-  const sortedData = Object.values(
-    result.data.reduce<Record<string, ChatV3Message[]>>((acc, message) => {
-      ;(acc[message.chat_id] ||= []).push(message)
-      return acc
-    }, {}),
-  )
-    .sort((a, b) => a[0].created_at - b[0].created_at) // 组间排序
-    .flatMap((group) =>
-      group.sort((b, a) => {
-        // 组内排序
-        if (a.type === 'answer') return -1
-        else return 1
-      }),
-    )
-  // console.log('coversation messages:', sortedData)
-  // 更新消息列表和标题
-  curTitle.value = conversationList.value.find(
-    (item) => item.coversation_id === coversation_id,
-  )!.title
-  messages.value = sortedData.map((item) => {
-    return {
-      role: item.role,
-      content: item.content,
-      content_type: item.content_type,
-    }
+
+  // 变量重置。路由跳转
+  firstSendQuery.value = ''
+  firstSendFiles.value = []
+  router.push({
+    name: 'chat',
+    params: {
+      conversationdId: coversation_id, // 参数名与路由定义一致
+    },
   })
 }
 </script>
@@ -168,7 +139,10 @@ const switch2ConversationId = async (coversation_id: string) => {
       <ul>
         <li
           class="conversation-item"
-          :class="{ active: coversation_id === activeConversationId, editing: editingId === coversation_id }"
+          :class="{
+            active: coversation_id === activeConversationId,
+            editing: editingId === coversation_id,
+          }"
           v-for="{ coversation_id, title } in items"
           :key="coversation_id"
           :data-conversation-id="coversation_id"
@@ -185,7 +159,7 @@ const switch2ConversationId = async (coversation_id: string) => {
               @keydown="handleKeyDown($event, coversation_id)"
               class="title-input"
               ref="titleInput"
-            >
+            />
             <span v-else>{{ title }}</span>
           </div>
           <div
@@ -222,15 +196,17 @@ const switch2ConversationId = async (coversation_id: string) => {
 .history-message {
   height: 100%;
   overflow-y: auto;
-  margin: 0 0 0 -50px;  // 减小负的左外边距，使内容向左移动的幅度更合适
+  margin: 0 0 0 -50px; // 减小负的左外边距，使内容向左移动的幅度更合适
   padding: 0 10px;
 }
+
 .group-title {
   font-size: 12px;
   color: #888;
-  margin: 12px 0 8px 0;  // 增加上下间距，使分组标题更加明显
-  padding-left: 45px;  // 添加左内边距，使分组标题与会话项对齐
+  margin: 12px 0 8px 0; // 增加上下间距，使分组标题更加明显
+  padding-left: 45px; // 添加左内边距，使分组标题与会话项对齐
 }
+
 .conversation-item {
   display: flex;
   align-items: center;
@@ -253,6 +229,7 @@ const switch2ConversationId = async (coversation_id: string) => {
     background-color: #3a3a3a;
     border: 1px solid #4a4a4a;
   }
+
   .conversation-title {
     flex: 1;
     overflow: hidden;
@@ -284,6 +261,7 @@ const switch2ConversationId = async (coversation_id: string) => {
       box-shadow: 0 0 0 3px rgba(22, 104, 220, 0.3);
     }
   }
+
   .more-btn {
     display: flex;
     align-items: center;
@@ -303,4 +281,3 @@ const switch2ConversationId = async (coversation_id: string) => {
   }
 }
 </style>
-

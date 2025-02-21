@@ -1,4 +1,14 @@
 <template>
+  <div class="file-container">
+    <div class="file-item" v-for="item in files" :key="item.id">
+      <div class="file-view"><img :src="getFilePath(item.name)" alt="file" /></div>
+      <div class="file-detail">
+        <div class="file-name">{{ item.name }}</div>
+        <div class="file-size">{{ item.size }}</div>
+      </div>
+    </div>
+  </div>
+
   <div
     class="question-container"
     v-if="!isEditing"
@@ -52,6 +62,7 @@ import { ref, nextTick } from 'vue'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 import { deleteMessage } from '@/service/conversation'
+import type { uploadFileItem } from '@/types/index'
 const store = useStore()
 const { messages, detailMessageList, conversation_id } = storeToRefs(store)
 
@@ -60,10 +71,20 @@ const inputRef = ref<HTMLTextAreaElement | null>(null) // 输入框引用
 const isShowEdit = ref(false) // 是否显示编辑按钮
 const isEditing = ref(false) // 是否处于编辑模式
 const editedMessage = ref('') // 编辑后的内容
-const { message } = defineProps<{
+const { message, files } = defineProps<{
   // props
   message: string
+  files: uploadFileItem[]
 }>()
+
+const getFilePath = (name: string) => {
+  const basepath = '/img/'
+  const imageExtensions = ['jpg', 'png', 'gif', 'webp', 'bmp', 'pcd', 'tiff']
+  // 获取文件名后缀（统一转小写
+  const extension = name?.toLowerCase()?.split('.')?.pop() || ''
+  const filetype = imageExtensions.includes(extension) ? 'img' : 'file'
+  return basepath + filetype + '.svg'
+}
 
 const emit = defineEmits(['generate-chat'])
 
@@ -79,12 +100,20 @@ const startEditing = () => {
 // 保存编辑
 const saveEditing = () => {
   isEditing.value = false
+  console.log('messages:', messages.value)
   const index = messages.value.findIndex((item) => item.content === message)
+  // 对于多模态内容中的文件内容进行保存
+  let files: uploadFileItem[] = []
   if (index !== -1) {
+    if (messages.value[index].content_type === 'object_string') {
+      files = messages.value[index].files || []
+    }
     messages.value.splice(index, 2)
   }
-  const chat_id = detailMessageList.value.find((item) => item.content === message)!.chat_id
-  const deleteMessageId = detailMessageList.value.find((item) => item.content === message)!.id
+  const chat_id = detailMessageList.value.find((item) => item.content.includes(message))!.chat_id
+  const deleteMessageId = detailMessageList.value.find(
+    (item) => item.chat_id === chat_id && item.type === 'question',
+  )!.id
   const deleteAnswerId = detailMessageList.value.find(
     (item) => item.chat_id === chat_id && item.type === 'answer',
   )!.id
@@ -92,12 +121,21 @@ const saveEditing = () => {
   // console.log("deleteAnswerId:", deleteAnswerId)
   deleteMessage(conversation_id.value, deleteMessageId)
   deleteMessage(conversation_id.value, deleteAnswerId)
-  messages.value.push({
-    role: 'user',
-    content: editedMessage.value,
-    content_type: 'text',
-  })
-  emit('generate-chat', editedMessage.value)
+  if (files.length > 0) {
+    messages.value.push({
+      role: 'user',
+      content: editedMessage.value,
+      files: files,
+      content_type: 'object_string',
+    })
+  } else {
+    messages.value.push({
+      role: 'user',
+      content: editedMessage.value,
+      content_type: 'text',
+    })
+  }
+  emit('generate-chat', editedMessage.value, files)
 }
 
 // 处理回车键事件
@@ -116,6 +154,60 @@ const cancelEditing = () => {
 </script>
 
 <style lang="scss" scoped>
+.file-container {
+  display: flex;
+  justify-content: flex-end;
+  flex-flow: row wrap;
+  gap: 10px;
+  padding: 10px 0;
+
+  .file-item {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #404045;
+    border-radius: 8px;
+    height: 45px;
+    width: 225px;
+    padding: 9px 6px;
+    display: flex;
+    align-items: center;
+
+    .file-view {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      margin-right: 10px;
+    }
+
+    .file-detail {
+      flex: 1;
+
+      .file-name {
+        min-height: 20px;
+        max-width: 180px;
+        margin: 0;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 20px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .file-size {
+        color: #bbb;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin: 0;
+        font-size: 12px;
+        line-height: 17px;
+        overflow: hidden;
+      }
+    }
+  }
+}
+
 .question-container {
   display: flex;
   justify-content: flex-end;
