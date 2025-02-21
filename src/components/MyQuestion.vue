@@ -106,7 +106,7 @@ const saveEditing = () => {
   let files: uploadFileItem[] = []
   if (index !== -1) {
     if (messages.value[index].content_type === 'object_string') {
-      files = messages.value[index].files
+      files = messages.value[index].files || []
     }
     messages.value.splice(index, 2)
   }

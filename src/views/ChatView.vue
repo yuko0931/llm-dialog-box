@@ -120,7 +120,7 @@ import { uploadFile } from '@/service/file'
 import { formatFileSize, isImageFile, returnContent2Files } from '@/utils/index'
 import { useStore } from '@/stores/index'
 import { type ObjectStringItem, type ContentType, type ChatV3Message } from '@coze/api'
-import type { uploadFileItem } from '@/types/index'
+import type { uploadFileItem, chatMessage } from '@/types/index'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 const store = useStore()
@@ -363,7 +363,7 @@ watch(
         messages.value = sortedData.map((item) => {
           if (item.content_type === 'object_string') {
             const contentList = JSON.parse(item.content)
-            return returnContent2Files(contentList)
+            return returnContent2Files(contentList) as chatMessage
           } else {
             return {
               role: item.role,
@@ -396,7 +396,7 @@ watch(
         await generateChat(newQuery, firstSendFiles.value)
       }
     }
-    conversation_id.value = props.conversationdId
+    conversation_id.value = props.conversationdId || ''
   },
   {
     immediate: true,
@@ -417,9 +417,9 @@ watch(
   async () => {
     const query = messages.value[messages.value.length - 2].content
     messages.value.pop()
-    let files: fileItem[] = []
+    let files: uploadFileItem[] = []
     if (messages.value[messages.value.length - 1].content_type === 'object_string') {
-      files = messages.value[messages.value.length - 1].files as fileItem[]
+      files = messages.value[messages.value.length - 1].files as uploadFileItem[]
     }
     await generateChat(query, files)
   },
