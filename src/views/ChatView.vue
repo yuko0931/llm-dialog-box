@@ -1,3 +1,4 @@
+c
 <template>
   <div class="header">{{ curTitle }}</div>
   <div class="chat-list" ref="chatListRef">
@@ -119,16 +120,22 @@ import { uploadFile } from '@/service/file'
 import { formatFileSize, isImageFile, returnContent2Files } from '@/utils/index'
 import { useStore } from '@/stores/index'
 import { type ObjectStringItem, type ContentType, type ChatV3Message } from '@coze/api'
-import type { chatMessage, uploadFileItem } from '@/types/index'
+import type { uploadFileItem } from '@/types/index'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 const store = useStore()
-const { firstSendQuery, firstSendFiles, streamingConversationId, conversationList, isRegenerate } =
-  storeToRefs(store)
+const {
+  firstSendQuery,
+  firstSendFiles,
+  streamingConversationId,
+  messages,
+  conversation_id,
+  conversationList,
+  detailMessageList,
+  isRegenerate,
+} = storeToRefs(store)
 
 const inputMessage = ref<string>('') // 输入框的值
-const messages = ref<chatMessage[]>([]) // 消息列表
-const detailMessageList = ref<ChatV3Message[]>([]) // 从扣子api更新得到的详细消息列表
 const cur_chat_id = ref<string>('') // 当前对话的id
 const chatListRef = ref<HTMLElement | null>(null) // 获取聊天列表的引用
 const fileInput = ref<HTMLInputElement | null>(null) // 获取文件选择框的引用
@@ -301,7 +308,6 @@ const deleteFile = (name: string) => {
     uploadFiles.value.splice(index, 1)
   }
 }
-
 // 监听用户滚动
 const handleUserScroll = () => {
   if (chatListRef.value) {
@@ -390,6 +396,7 @@ watch(
         await generateChat(newQuery, firstSendFiles.value)
       }
     }
+    conversation_id.value = props.conversationdId
   },
   {
     immediate: true,

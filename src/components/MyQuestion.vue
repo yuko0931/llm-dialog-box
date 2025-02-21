@@ -71,7 +71,7 @@ const inputRef = ref<HTMLTextAreaElement | null>(null) // 输入框引用
 const isShowEdit = ref(false) // 是否显示编辑按钮
 const isEditing = ref(false) // 是否处于编辑模式
 const editedMessage = ref('') // 编辑后的内容
-const { message } = defineProps<{
+const { message, files } = defineProps<{
   // props
   message: string
   files: uploadFileItem[]
@@ -100,12 +100,20 @@ const startEditing = () => {
 // 保存编辑
 const saveEditing = () => {
   isEditing.value = false
+  console.log('messages:', messages.value)
   const index = messages.value.findIndex((item) => item.content === message)
+  // 对于多模态内容中的文件内容进行保存
+  let files: uploadFileItem[] = []
   if (index !== -1) {
+    if (messages.value[index].content_type === 'object_string') {
+      files = messages.value[index].files
+    }
     messages.value.splice(index, 2)
   }
-  const chat_id = detailMessageList.value.find((item) => item.content === message)!.chat_id
-  const deleteMessageId = detailMessageList.value.find((item) => item.content === message)!.id
+  const chat_id = detailMessageList.value.find((item) => item.content.includes(message))!.chat_id
+  const deleteMessageId = detailMessageList.value.find(
+    (item) => item.chat_id === chat_id && item.type === 'question',
+  )!.id
   const deleteAnswerId = detailMessageList.value.find(
     (item) => item.chat_id === chat_id && item.type === 'answer',
   )!.id
@@ -113,12 +121,21 @@ const saveEditing = () => {
   // console.log("deleteAnswerId:", deleteAnswerId)
   deleteMessage(conversation_id.value, deleteMessageId)
   deleteMessage(conversation_id.value, deleteAnswerId)
-  messages.value.push({
-    role: 'user',
-    content: editedMessage.value,
-    content_type: 'text',
-  })
-  emit('generate-chat', editedMessage.value)
+  if (files.length > 0) {
+    messages.value.push({
+      role: 'user',
+      content: editedMessage.value,
+      files: files,
+      content_type: 'object_string',
+    })
+  } else {
+    messages.value.push({
+      role: 'user',
+      content: editedMessage.value,
+      content_type: 'text',
+    })
+  }
+  emit('generate-chat', editedMessage.value, files)
 }
 
 // 处理回车键事件

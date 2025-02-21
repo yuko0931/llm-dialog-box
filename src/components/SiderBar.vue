@@ -7,7 +7,7 @@ import { useStore } from '@/stores/index'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 const store = useStore()
-const { firstSendQuery, firstSendFiles, activeConversationId } = storeToRefs(store)
+const { firstSendQuery, firstSendFiles, activeConversationId, messages } = storeToRefs(store)
 const isCollapsed = ref(false) // 控制侧边栏的折叠状态
 
 const toggleSidebar = () => {
@@ -17,6 +17,7 @@ const toggleSidebar = () => {
 const createNewConversation = () => {
   firstSendQuery.value = ''
   firstSendFiles.value = []
+  messages.value = []
   activeConversationId.value = ''
   // 通过路由跳转实现
   router.push({
