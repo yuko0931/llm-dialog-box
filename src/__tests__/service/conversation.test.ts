@@ -7,11 +7,11 @@ import {
   getMessageInfo,
   updateMessage,
   deleteMessage,
-} from './conversation'
-import { client } from './client'
+} from '../../service/conversation'
+import { client } from '../../service/client'
 import { RoleType } from '@coze/api'
 
-vi.mock('./client', () => ({
+vi.mock('../../service/client', () => ({
   client: {
     conversations: {
       create: vi.fn(),
@@ -47,9 +47,11 @@ describe('Conversation Service', () => {
       msg: '',
     }
 
-    ;(client.conversations.create as vi.Mock).mockResolvedValue(mockConversationResolved)
-
+    ;(client.conversations.create as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockConversationResolved,
+    )
     const result = await createConversation()
+
     expect(result).toEqual(mockConversationResolved)
     expect(client.conversations.create).toHaveBeenCalledWith({
       bot_id: expect.any(String),
@@ -71,7 +73,9 @@ describe('Conversation Service', () => {
       msg: '',
     }
 
-    ;(client.conversations.retrieve as vi.Mock).mockResolvedValue(mockConversationInfoResolved)
+    ;(client.conversations.retrieve as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockConversationInfoResolved,
+    )
 
     const result = await getConversationInfo(mock_conversation_id)
     expect(result).toEqual(mockConversationInfoResolved)
@@ -103,7 +107,9 @@ describe('Conversation Service', () => {
       msg: '',
     }
 
-    ;(client.conversations.messages.create as vi.Mock).mockResolvedValue(createMessageResolved)
+    ;(client.conversations.messages.create as ReturnType<typeof vi.fn>).mockResolvedValue(
+      createMessageResolved,
+    )
 
     const result = await createMessage(
       mock_conversation_id,
@@ -160,7 +166,9 @@ describe('Conversation Service', () => {
       last_id: '737363834493440****',
       msg: '',
     }
-    ;(client.conversations.messages.list as vi.Mock).mockResolvedValue(messageListResolved)
+    ;(client.conversations.messages.list as ReturnType<typeof vi.fn>).mockResolvedValue(
+      messageListResolved,
+    )
 
     const result = await getMessageList(mock_conversation_id)
     expect(result).toEqual(messageListResolved)
@@ -190,7 +198,9 @@ describe('Conversation Service', () => {
       msg: '',
     }
 
-    ;(client.conversations.messages.retrieve as vi.Mock).mockResolvedValue(mockMessageInfoResolved)
+    ;(client.conversations.messages.retrieve as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockMessageInfoResolved,
+    )
 
     const result = await getMessageInfo(mock_conversation_id, mock_message_id)
     expect(result).toEqual(mockMessageInfoResolved)
@@ -225,7 +235,9 @@ describe('Conversation Service', () => {
       msg: '',
     }
 
-    ;(client.conversations.messages.update as vi.Mock).mockResolvedValue(mockUpdateMessageResolved)
+    ;(client.conversations.messages.update as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockUpdateMessageResolved,
+    )
 
     try {
       const result = await updateMessage(
@@ -271,7 +283,9 @@ describe('Conversation Service', () => {
       },
       msg: '',
     }
-    ;(client.conversations.messages.delete as vi.Mock).mockResolvedValue(mockDeleteMessageResolved)
+    ;(client.conversations.messages.delete as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockDeleteMessageResolved,
+    )
 
     try {
       const result = await deleteMessage(mock_conversation_id, mock_message_id)

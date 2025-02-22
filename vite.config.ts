@@ -6,6 +6,7 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/llm-dialog-box/', // 添加这一行
   plugins: [
     vue(),
     // vueDevTools(),
