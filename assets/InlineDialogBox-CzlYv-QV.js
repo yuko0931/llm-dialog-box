@@ -1,1 +1,0 @@
-import{_ as e,c as o,o as c}from"./index-DvBnf2sd.js";const n={},a={class:"container"};function s(t,i){return c(),o("div",a,"this is an inline dialog box")}const r=e(n,[["render",s],["__scopeId","data-v-5dafc745"]]);export{r as default};
