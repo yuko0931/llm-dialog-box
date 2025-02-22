@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@coze/api": "^1.0.17",
+    "@icon-park/vue-next": "^1.4.2",
     "highlight.js": "^11.11.1",
     "marked": "^15.0.6",
     "pinia": "^2.3.0",
