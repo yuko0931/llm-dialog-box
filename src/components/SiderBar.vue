@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { MenuFold, MenuUnfold } from '@icon-park/vue-next'
 import HistoryMessage from './HistoryMessage.vue'
-import Logo from './Logo.vue'
+import Logo from './LLMLogo.vue'
 import { storeToRefs } from 'pinia'
 import { useStore } from '@/stores/index'
 import { useRouter } from 'vue-router'
@@ -123,6 +123,7 @@ const createNewConversation = () => {
 
   .create-message {
     padding: 0 0 12px 12px;
+
     div {
       width: 120px;
       height: 40px;
@@ -179,6 +180,7 @@ const createNewConversation = () => {
     width: 24px;
   }
 }
+
 .sidebar-content {
   flex: 1;
   overflow: hidden;
@@ -193,6 +195,7 @@ const createNewConversation = () => {
     flex-direction: column;
   }
 }
+
 .sidebar-header,
 .sidebar-section {
   margin-bottom: 10px;
