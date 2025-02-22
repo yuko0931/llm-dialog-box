@@ -43,7 +43,7 @@ const startEditing = (coversation_id: string, title: string, event?: MouseEvent)
 }
 
 // 保存编辑的标题
-const saveTitle = (coversation_id: string, event: MouseEvent) => {
+const saveTitle = (coversation_id: string, event: Event) => {
   event.stopPropagation()
   if (editingTitle.value.trim()) {
     const conversation = conversationList.value.find(
@@ -60,7 +60,7 @@ const saveTitle = (coversation_id: string, event: MouseEvent) => {
 // 处理按键事件
 const handleKeyDown = (event: KeyboardEvent, coversation_id: string) => {
   if (event.key === 'Enter') {
-    saveTitle(coversation_id, event as unknown as MouseEvent)
+    saveTitle(coversation_id, event) // KeyboardEvent 是 Event 的子类型
   } else if (event.key === 'Escape') {
     editingId.value = ''
   }
@@ -106,7 +106,7 @@ const conversationListGroups = computed(() => {
       )
 
       const group = groupMap.find(({ check }) => check(dateDiff))!.label
-      ;(acc[group] = acc[group] || []).push(item)
+        ; (acc[group] = acc[group] || []).push(item)
       return acc
     },
     {} as Record<string, typeof conversationList.value>,
@@ -137,59 +137,33 @@ const switch2ConversationId = (coversation_id: string) => {
     <div v-for="[groupName, items] in conversationListGroups" :key="groupName">
       <div class="group-title">{{ groupName }}</div>
       <ul>
-        <li
-          class="conversation-item"
-          :class="{
-            active: coversation_id === activeConversationId,
-            editing: editingId === coversation_id,
-          }"
-          v-for="{ coversation_id, title } in items"
-          :key="coversation_id"
-          :data-conversation-id="coversation_id"
-          @click="switch2ConversationId(coversation_id)"
-          @mouseenter="hoveredCoversationId = coversation_id"
-          @mouseleave="hoveredCoversationId = ''"
-        >
+        <li class="conversation-item" :class="{
+          active: coversation_id === activeConversationId,
+          editing: editingId === coversation_id,
+        }" v-for="{ coversation_id, title } in items" :key="coversation_id" :data-conversation-id="coversation_id"
+          @click="switch2ConversationId(coversation_id)" @mouseenter="hoveredCoversationId = coversation_id"
+          @mouseleave="hoveredCoversationId = ''">
           <div class="conversation-title" @dblclick="startEditing(coversation_id, title, $event)">
-            <input
-              v-if="editingId === coversation_id"
-              v-model="editingTitle"
-              @click.stop
-              @blur="saveTitle(coversation_id, $event)"
-              @keydown="handleKeyDown($event, coversation_id)"
-              class="title-input"
-              ref="titleInput"
-            />
+            <input v-if="editingId === coversation_id" v-model="editingTitle" @click.stop
+              @blur="saveTitle(coversation_id, $event)" @keydown="handleKeyDown($event, coversation_id)"
+              class="title-input" ref="titleInput" />
             <span v-else>{{ title }}</span>
           </div>
-          <div
-            class="more-btn"
-            v-show="
-              coversation_id === activeConversationId || hoveredCoversationId === coversation_id
-            "
-            @click="openMoreDialog(coversation_id, title, $event)"
-          >
+          <div class="more-btn" v-show="coversation_id === activeConversationId || hoveredCoversationId === coversation_id
+            " @click="openMoreDialog(coversation_id, title, $event)">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                fill-rule="evenodd"
+              <path fill="currentColor" fill-rule="evenodd"
                 d="M4 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8-2a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm8 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"
-                clip-rule="evenodd"
-              ></path>
+                clip-rule="evenodd"></path>
             </svg>
           </div>
         </li>
       </ul>
     </div>
   </div>
-  <MoreDialog
-    v-if="showMoreDialog && selectedConversation"
-    :visible="showMoreDialog"
-    :conversation-id="selectedConversation.id"
-    :title="selectedConversation.title"
-    :position="selectedConversation.position"
-    :on-close="closeMoreDialog"
-  />
+  <MoreDialog v-if="showMoreDialog && selectedConversation" :visible="showMoreDialog"
+    :conversation-id="selectedConversation.id" :title="selectedConversation.title"
+    :position="selectedConversation.position" :on-close="closeMoreDialog" />
 </template>
 
 <style scoped lang="scss">
