@@ -137,7 +137,8 @@ describe('streamingChat service test', () => {
 
     try {
       await streamingChat({
-        query: mock_query,
+        final_query: mock_query,
+        content_type: 'text',
         conversation_id: mock_conversation_id,
         callback: () => {},
         onChatCreated: (chatId) => {
