@@ -130,6 +130,7 @@ import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { uploadFile } from '@/service/file'
 import type { uploadFileItem } from '@/types/index'
 import { formatFileSize, isImageFile } from '@/utils/index'
+import { type ObjectStringItem, type ContentType } from '@coze/api'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 
@@ -168,7 +169,7 @@ const handleSendMessage = async () => {
 
   if (firstSend.value === false) {
     const result = await createConversation()
-    conversation_id.value = result.conversation_id
+    conversation_id.value = result.id
     firstSend.value = true
   }
 
