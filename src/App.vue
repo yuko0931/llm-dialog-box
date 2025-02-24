@@ -25,7 +25,7 @@ getConversationList()
 .contanier {
   position: absolute;
   top: 20px;
-  right: 20px;
+  right: 50px;
   display: flex;
   align-items: center;
 
