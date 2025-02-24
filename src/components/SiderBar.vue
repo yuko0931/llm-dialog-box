@@ -12,10 +12,10 @@ const { firstSendQuery, firstSendFiles, activeConversationId, messages } = store
 const isCollapsed = ref(false) // 控制侧边栏的折叠状态
 // 增加移动端状态控制
 const mobileActive = ref(false)
-// const toggleSidebar = () => {
-//   isCollapsed.value = true
-//   mobileActive.value = false
-// }
+const toggleSidebar = () => {
+  isCollapsed.value = false
+  mobileActive.value = true
+}
 
 const createNewConversation = () => {
   firstSendQuery.value = ''
@@ -107,14 +107,7 @@ const createNewConversation = () => {
   <!-- 移动端顶部栏 -->
   <div class="mobile-header">
     <div class="sidebar-toggle btn">
-      <MenuUnfold
-        theme="outline"
-        :size="24"
-        @click="
-          isCollapsed = false
-          mobileActive = true
-        "
-      />
+      <MenuUnfold theme="outline" :size="24" @click="toggleSidebar" />
     </div>
     <div class="collapsed-btn btn" @click="createNewConversation">
       <svg
