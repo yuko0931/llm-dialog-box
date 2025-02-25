@@ -28,6 +28,7 @@ getConversationList()
   right: 50px;
   display: flex;
   align-items: center;
+  z-index: 200;
 
   a {
     color: #ccc;
