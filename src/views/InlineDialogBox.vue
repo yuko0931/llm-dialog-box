@@ -113,7 +113,31 @@
           ></LLMAnswer>
         </keep-alive>
       </div>
-      <div class="history-list" v-else></div>
+      <div class="history-list" v-else>
+        <div class="history-container">
+          <div class="history-section">
+            <div class="section-title">最近记录</div>
+            <div class="history-items">
+              <div class="history-item" v-for="{ conversation_id, title } in filteredConversationList" :key="conversation_id" @click="switch2ConversationId(conversation_id)">
+                <span class="item-text">{{ title }}</span>
+                <span class="delete-btn" @click.stop="deleteConversation(conversation_id)">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.4 12L0 9.6L3.6 6L0 2.4L2.4 0L6 3.6L9.6 0L12 2.4L8.4 6L12 9.6L9.6 12L6 8.4L2.4 12Z" fill="currentColor"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="history-section">
+            <div class="section-title">建议提示</div>
+            <div class="history-items">
+              <div class="history-item" v-for="(item, index) in suggestedPrompts" :key="index" @click="inputMessage = item">
+                <span class="item-text">{{ item }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -124,7 +148,7 @@ import LLMAnswer from '@/components/LLMAnswer.vue'
 import UploadFileView from '@/components/UploadFileView.vue'
 
 import { Search } from '@icon-park/vue-next'
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { createConversation } from '@/service/conversation'
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { uploadFile } from '@/service/file'
@@ -133,6 +157,8 @@ import { formatFileSize, isImageFile } from '@/utils/index'
 import { type ObjectStringItem, type ContentType } from '@coze/api'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
+
 
 const showDialog = ref(false) // 控制对话框的显示与隐藏
 
@@ -148,15 +174,81 @@ const autoScroll = ref<boolean>(true) // 是否自动滚动
 const firstSend = ref<boolean>(false) // 是否已经执行过一次
 
 const store = useStore()
-const { messages, conversation_id, isRegenerate } = storeToRefs(store)
+const router = useRouter()
+const { messages, conversation_id, isRegenerate, conversationList } = storeToRefs(store)
 
 // 对话框关闭事件
+const suggestedPrompts = ref<string[]>([
+  '介绍一下Vercel的主要功能',
+  '如何使用Vercel CLI?',
+  '如何设置自定义域名?',
+  '如何进行团队协作?'
+])
+
+
+
+const handleHistoryClick = (title: string, coversation_id?: string) => {
+  if (coversation_id) {
+    router.push(`/chat/${coversation_id}`)
+    showDialog.value = false
+  } else {
+    inputMessage.value = title
+  }
+}
+
+const filteredConversationList = computed(() => {
+  if (!inputMessage.value) return conversationList.value
+  return conversationList.value.filter(item => 
+    item.title.toLowerCase().includes(inputMessage.value.toLowerCase())
+  )
+})
+
+const deleteConversation = (coversation_id: string) => {
+  store.conversationList.value = store.conversationList.value.filter(item => item.conversation_id !== coversation_id)
+  localStorage.setItem('conversationList', JSON.stringify(store.conversationList.value))
+}
+
+const switch2ConversationId = async (coversation_id: string) => {
+  store.changeConversationId(coversation_id)
+  conversation_id.value = coversation_id
+  // 重置相关状态
+  inputMessage.value = ''
+  firstSend.value = true  // 设置为true因为已经存在会话
+  currentAnswer.value = ''
+  isStreaming.value = false
+  isCancelled.value = false
+  autoScroll.value = true
+  uploadFiles.value = []
+  
+  // 获取历史消息列表
+  try {
+    const messageList = await getMessageList(coversation_id)
+    if (messageList && messageList.data) {
+      messages.value = messageList.data.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        files: msg.files
+      }))
+    }
+  } catch (error) {
+    console.error('获取历史消息失败:', error)
+  }
+  
+  router.push(`/chat/${coversation_id}`)
+  showDialog.value = false
+}
+
+const deleteHistory = (index: number) => {
+  recentHistory.value.splice(index, 1)
+}
+
 const handleClose = (e: MouseEvent) => {
   if ((e.target as HTMLElement).classList.contains('dialog-overlay')) {
     showDialog.value = false
     conversation_id.value = ''
     inputMessage.value = ''
     messages.value = []
+    firstSend.value = false  // 重置firstSend状态
   }
 }
 
@@ -167,10 +259,25 @@ const handleSendMessage = async () => {
   const curUploadFiles = uploadFiles.value
   uploadFiles.value = []
 
-  if (firstSend.value === false) {
-    const result = await createConversation()
-    conversation_id.value = result.id
-    firstSend.value = true
+  // 如果是第一次发送消息，需要先创建会话
+  if (!firstSend.value) {
+    try {
+      const result = await createConversation()
+      conversation_id.value = result.id
+      firstSend.value = true
+      
+      // 将第一条消息作为标题保存到conversationList
+      const newConversation: conversationInfo = {
+        conversation_id: result.id,
+        title: query,
+        date: new Date().toISOString()
+      }
+      store.conversationList.value.unshift(newConversation)
+      localStorage.setItem('conversationList', JSON.stringify(store.conversationList.value))
+    } catch (error) {
+      console.error('创建会话失败:', error)
+      return
+    }
   }
 
   if (curUploadFiles.length > 0) {
@@ -526,6 +633,75 @@ watch(
       div {
         width: 100%;
         max-width: 48rem;
+      }
+    }
+
+    .history-list {
+      width: 100%;
+      box-sizing: border-box;
+      flex: 1 1;
+      padding: 20px;
+      display: flex;
+      flex-flow: column nowrap;
+      align-items: center;
+      overflow: auto;
+
+      .history-container {
+        width: 100%;
+        max-width: 48rem;
+      }
+
+      .history-section {
+        margin-bottom: 24px;
+
+        .section-title {
+          font-size: 14px;
+          color: #757575;
+          margin-bottom: 12px;
+        }
+
+        .history-items {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .history-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          background-color: #292a2d;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+
+          &:hover {
+            background-color: #363636;
+
+            .delete-btn {
+              opacity: 1;
+            }
+          }
+
+          .item-text {
+            color: #f5f5f5;
+            font-size: 14px;
+          }
+
+          .delete-btn {
+            opacity: 0;
+            color: #757575;
+            transition: all 0.2s;
+            padding: 4px;
+            border-radius: 4px;
+
+            &:hover {
+              background-color: #404040;
+              color: #f5f5f5;
+            }
+          }
+        }
       }
     }
   }

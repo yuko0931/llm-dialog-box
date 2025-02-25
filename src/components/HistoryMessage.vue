@@ -126,7 +126,7 @@ const switch2ConversationId = (coversation_id: string) => {
   router.push({
     name: 'chat',
     params: {
-      conversationdId: coversation_id, // 参数名与路由定义一致
+      conversationId: coversation_id, // 参数名与路由定义一致
     },
   })
 }
