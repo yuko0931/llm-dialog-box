@@ -118,11 +118,25 @@
           <div class="history-section">
             <div class="section-title">最近记录</div>
             <div class="history-items">
-              <div class="history-item" v-for="{ conversation_id, title } in filteredConversationList" :key="conversation_id" @click="switch2ConversationId(conversation_id)">
+              <div
+                class="history-item"
+                v-for="{ coversation_id, title } in filteredConversationList"
+                :key="coversation_id"
+                @click="switch2ConversationId(coversation_id)"
+              >
                 <span class="item-text">{{ title }}</span>
-                <span class="delete-btn" @click.stop="deleteConversation(conversation_id)">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2.4 12L0 9.6L3.6 6L0 2.4L2.4 0L6 3.6L9.6 0L12 2.4L8.4 6L12 9.6L9.6 12L6 8.4L2.4 12Z" fill="currentColor"/>
+                <span class="delete-btn" @click.stop="deleteConversation(coversation_id)">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2.4 12L0 9.6L3.6 6L0 2.4L2.4 0L6 3.6L9.6 0L12 2.4L8.4 6L12 9.6L9.6 12L6 8.4L2.4 12Z"
+                      fill="currentColor"
+                    />
                   </svg>
                 </span>
               </div>
@@ -131,7 +145,12 @@
           <div class="history-section">
             <div class="section-title">建议提示</div>
             <div class="history-items">
-              <div class="history-item" v-for="(item, index) in suggestedPrompts" :key="index" @click="inputMessage = item">
+              <div
+                class="history-item"
+                v-for="(item, index) in suggestedPrompts"
+                :key="index"
+                @click="inputMessage = item"
+              >
                 <span class="item-text">{{ item }}</span>
               </div>
             </div>
@@ -149,16 +168,14 @@ import UploadFileView from '@/components/UploadFileView.vue'
 
 import { Search } from '@icon-park/vue-next'
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
-import { createConversation } from '@/service/conversation'
+import { createConversation, getMessageList } from '@/service/conversation'
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { uploadFile } from '@/service/file'
-import type { uploadFileItem } from '@/types/index'
-import { formatFileSize, isImageFile } from '@/utils/index'
-import { type ObjectStringItem, type ContentType } from '@coze/api'
+import type { uploadFileItem, conversationInfo, chatMessage } from '@/types/index'
+import { formatFileSize, isImageFile, returnContent2Files } from '@/utils/index'
+import { type ObjectStringItem, type ContentType, type ChatV3Message } from '@coze/api'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
-
 
 const showDialog = ref(false) // 控制对话框的显示与隐藏
 
@@ -174,72 +191,78 @@ const autoScroll = ref<boolean>(true) // 是否自动滚动
 const firstSend = ref<boolean>(false) // 是否已经执行过一次
 
 const store = useStore()
-const router = useRouter()
-const { messages, conversation_id, isRegenerate, conversationList } = storeToRefs(store)
+
+const { messages, conversation_id, isRegenerate, conversationList, detailMessageList } =
+  storeToRefs(store)
 
 // 对话框关闭事件
 const suggestedPrompts = ref<string[]>([
   '介绍一下Vercel的主要功能',
   '如何使用Vercel CLI?',
   '如何设置自定义域名?',
-  '如何进行团队协作?'
+  '如何进行团队协作?',
 ])
-
-
-
-const handleHistoryClick = (title: string, coversation_id?: string) => {
-  if (coversation_id) {
-    router.push(`/chat/${coversation_id}`)
-    showDialog.value = false
-  } else {
-    inputMessage.value = title
-  }
-}
 
 const filteredConversationList = computed(() => {
   if (!inputMessage.value) return conversationList.value
-  return conversationList.value.filter(item => 
-    item.title.toLowerCase().includes(inputMessage.value.toLowerCase())
+  return conversationList.value.filter((item) =>
+    item.title.toLowerCase().includes(inputMessage.value.toLowerCase()),
   )
 })
 
 const deleteConversation = (coversation_id: string) => {
-  store.conversationList.value = store.conversationList.value.filter(item => item.conversation_id !== coversation_id)
-  localStorage.setItem('conversationList', JSON.stringify(store.conversationList.value))
+  conversationList.value = conversationList.value.filter(
+    (item) => item.coversation_id !== coversation_id,
+  )
+  localStorage.setItem('conversationList', JSON.stringify(conversationList.value))
 }
 
 const switch2ConversationId = async (coversation_id: string) => {
-  store.changeConversationId(coversation_id)
   conversation_id.value = coversation_id
   // 重置相关状态
   inputMessage.value = ''
-  firstSend.value = true  // 设置为true因为已经存在会话
+  firstSend.value = true // 设置为true因为已经存在会话
   currentAnswer.value = ''
   isStreaming.value = false
   isCancelled.value = false
   autoScroll.value = true
   uploadFiles.value = []
-  
-  // 获取历史消息列表
-  try {
-    const messageList = await getMessageList(coversation_id)
-    if (messageList && messageList.data) {
-      messages.value = messageList.data.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        files: msg.files
-      }))
-    }
-  } catch (error) {
-    console.error('获取历史消息失败:', error)
-  }
-  
-  router.push(`/chat/${coversation_id}`)
-  showDialog.value = false
-}
+  console.log('switch to conversation:', coversation_id)
 
-const deleteHistory = (index: number) => {
-  recentHistory.value.splice(index, 1)
+  if (coversation_id) {
+    const result = await getMessageList(coversation_id) // 获取消息列表
+    detailMessageList.value = result.data
+    console.log('coversation messages:', detailMessageList.value)
+    // 按 chat_id 分组，组间按 created_at 排序，组内按 type 排序( answer在后 )
+    const sortedData = Object.values(
+      result.data.reduce<Record<string, ChatV3Message[]>>((acc, message) => {
+        ;(acc[message.chat_id] ||= []).push(message)
+        return acc
+      }, {}),
+    )
+      .sort((a, b) => a[0].created_at - b[0].created_at) // 组间排序
+      .flatMap((group) =>
+        group.sort((b, a) => {
+          // 组内排序
+          if (a.type === 'answer') return -1
+          else return 1
+        }),
+      )
+
+    // 多模态的content还需进一步处理
+    messages.value = sortedData.map((item) => {
+      if (item.content_type === 'object_string') {
+        const contentList = JSON.parse(item.content)
+        return returnContent2Files(contentList) as chatMessage
+      } else {
+        return {
+          role: item.role,
+          content: item.content,
+          content_type: item.content_type,
+        }
+      }
+    })
+  }
 }
 
 const handleClose = (e: MouseEvent) => {
@@ -248,7 +271,7 @@ const handleClose = (e: MouseEvent) => {
     conversation_id.value = ''
     inputMessage.value = ''
     messages.value = []
-    firstSend.value = false  // 重置firstSend状态
+    firstSend.value = false // 重置firstSend状态
   }
 }
 
@@ -265,15 +288,15 @@ const handleSendMessage = async () => {
       const result = await createConversation()
       conversation_id.value = result.id
       firstSend.value = true
-      
+
       // 将第一条消息作为标题保存到conversationList
       const newConversation: conversationInfo = {
-        conversation_id: result.id,
+        coversation_id: result.id,
         title: query,
-        date: new Date().toISOString()
+        date: new Date(),
       }
-      store.conversationList.value.unshift(newConversation)
-      localStorage.setItem('conversationList', JSON.stringify(store.conversationList.value))
+      conversationList.value.unshift(newConversation)
+      localStorage.setItem('conversationList', JSON.stringify(conversationList.value))
     } catch (error) {
       console.error('创建会话失败:', error)
       return
