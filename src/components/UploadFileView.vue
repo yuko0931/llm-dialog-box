@@ -60,7 +60,7 @@ const isHoverd = ref<boolean>(false)
 
 // 根据文件名后缀判断是否为图片
 const filepath = computed(() => {
-  const basepath = '/img/'
+  const basepath = '/llm-dialog-box/img/'
   const imageExtensions = ['jpg', 'png', 'gif', 'webp', 'bmp', 'pcd', 'tiff']
   // 获取文件名后缀（统一转小写
   const extension = props.name?.toLowerCase()?.split('.')?.pop() || ''

@@ -1,6 +1,7 @@
 <template>
   <div class="container">
     <SiderBar />
+
     <!-- 使用 Sidebar 组件 -->
     <div class="main-wrapper">
       <div class="chat-wrapper">
@@ -20,13 +21,6 @@ import SiderBar from '@/components/SiderBar.vue'
   width: 100%;
   height: 100%;
 
-  .side {
-    width: 260px;
-    height: 100%;
-    background-color: #171717;
-    color: #fff;
-  }
-
   .main-wrapper {
     flex: 1 1 0%;
     background-color: #212121;
@@ -34,6 +28,11 @@ import SiderBar from '@/components/SiderBar.vue'
     display: flex;
     flex-flow: column nowrap;
     align-items: center;
+    padding: 0 64px;
+
+    @media (max-width: 768px) {
+      padding: 0 16px;
+    }
 
     .chat-wrapper {
       height: calc(100% - 60px);

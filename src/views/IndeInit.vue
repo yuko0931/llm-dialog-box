@@ -120,7 +120,7 @@ const handleSendMessage = async () => {
   router.push({
     name: 'chat',
     params: {
-      conversationdId: conversation_id,
+      conversationId: conversation_id,
     },
   })
 }

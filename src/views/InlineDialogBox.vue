@@ -113,7 +113,50 @@
           ></LLMAnswer>
         </keep-alive>
       </div>
-      <div class="history-list" v-else></div>
+      <div class="history-list" v-else>
+        <div class="history-container">
+          <div class="history-section">
+            <div class="section-title">最近记录</div>
+            <div class="history-items">
+              <div
+                class="history-item"
+                v-for="{ coversation_id, title } in filteredConversationList"
+                :key="coversation_id"
+                @click="switch2ConversationId(coversation_id)"
+              >
+                <span class="item-text">{{ title }}</span>
+                <span class="delete-btn" @click.stop="deleteConversation(coversation_id)">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2.4 12L0 9.6L3.6 6L0 2.4L2.4 0L6 3.6L9.6 0L12 2.4L8.4 6L12 9.6L9.6 12L6 8.4L2.4 12Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="history-section">
+            <div class="section-title">建议提示</div>
+            <div class="history-items">
+              <div
+                class="history-item"
+                v-for="(item, index) in suggestedPrompts"
+                :key="index"
+                @click="inputMessage = item"
+              >
+                <span class="item-text">{{ item }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -124,12 +167,13 @@ import LLMAnswer from '@/components/LLMAnswer.vue'
 import UploadFileView from '@/components/UploadFileView.vue'
 
 import { Search } from '@icon-park/vue-next'
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { createConversation } from '@/service/conversation'
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { createConversation, getMessageList } from '@/service/conversation'
 import { streamingChat, cancelstreamingChat } from '@/service/chat'
 import { uploadFile } from '@/service/file'
-import type { uploadFileItem } from '@/types/index'
-import { formatFileSize, isImageFile } from '@/utils/index'
+import type { uploadFileItem, conversationInfo, chatMessage } from '@/types/index'
+import { formatFileSize, isImageFile, returnContent2Files } from '@/utils/index'
+import { type ObjectStringItem, type ContentType, type ChatV3Message } from '@coze/api'
 import { useStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 
@@ -147,15 +191,87 @@ const autoScroll = ref<boolean>(true) // 是否自动滚动
 const firstSend = ref<boolean>(false) // 是否已经执行过一次
 
 const store = useStore()
-const { messages, conversation_id, isRegenerate } = storeToRefs(store)
+
+const { messages, conversation_id, isRegenerate, conversationList, detailMessageList } =
+  storeToRefs(store)
 
 // 对话框关闭事件
+const suggestedPrompts = ref<string[]>([
+  '介绍一下Vercel的主要功能',
+  '如何使用Vercel CLI?',
+  '如何设置自定义域名?',
+  '如何进行团队协作?',
+])
+
+const filteredConversationList = computed(() => {
+  if (!inputMessage.value) return conversationList.value
+  return conversationList.value.filter((item) =>
+    item.title.toLowerCase().includes(inputMessage.value.toLowerCase()),
+  )
+})
+
+const deleteConversation = (coversation_id: string) => {
+  conversationList.value = conversationList.value.filter(
+    (item) => item.coversation_id !== coversation_id,
+  )
+  localStorage.setItem('conversationList', JSON.stringify(conversationList.value))
+}
+
+const switch2ConversationId = async (coversation_id: string) => {
+  conversation_id.value = coversation_id
+  // 重置相关状态
+  inputMessage.value = ''
+  firstSend.value = true // 设置为true因为已经存在会话
+  currentAnswer.value = ''
+  isStreaming.value = false
+  isCancelled.value = false
+  autoScroll.value = true
+  uploadFiles.value = []
+  console.log('switch to conversation:', coversation_id)
+
+  if (coversation_id) {
+    const result = await getMessageList(coversation_id) // 获取消息列表
+    detailMessageList.value = result.data
+    console.log('coversation messages:', detailMessageList.value)
+    // 按 chat_id 分组，组间按 created_at 排序，组内按 type 排序( answer在后 )
+    const sortedData = Object.values(
+      result.data.reduce<Record<string, ChatV3Message[]>>((acc, message) => {
+        ;(acc[message.chat_id] ||= []).push(message)
+        return acc
+      }, {}),
+    )
+      .sort((a, b) => a[0].created_at - b[0].created_at) // 组间排序
+      .flatMap((group) =>
+        group.sort((b, a) => {
+          // 组内排序
+          if (a.type === 'answer') return -1
+          else return 1
+        }),
+      )
+
+    // 多模态的content还需进一步处理
+    messages.value = sortedData.map((item) => {
+      if (item.content_type === 'object_string') {
+        const contentList = JSON.parse(item.content)
+        return returnContent2Files(contentList) as chatMessage
+      } else {
+        return {
+          role: item.role,
+          content: item.content,
+          content_type: item.content_type,
+        }
+      }
+    })
+  }
+}
+
 const handleClose = (e: MouseEvent) => {
   if ((e.target as HTMLElement).classList.contains('dialog-overlay')) {
     showDialog.value = false
     conversation_id.value = ''
     inputMessage.value = ''
     messages.value = []
+    firstSend.value = false // 重置firstSend状态
   }
 }
 
@@ -166,10 +282,25 @@ const handleSendMessage = async () => {
   const curUploadFiles = uploadFiles.value
   uploadFiles.value = []
 
-  if (firstSend.value === false) {
-    const result = await createConversation()
-    conversation_id.value = result.conversation_id
-    firstSend.value = true
+  // 如果是第一次发送消息，需要先创建会话
+  if (!firstSend.value) {
+    try {
+      const result = await createConversation()
+      conversation_id.value = result.id
+      firstSend.value = true
+
+      // 将第一条消息作为标题保存到conversationList
+      const newConversation: conversationInfo = {
+        coversation_id: result.id,
+        title: query,
+        date: new Date(),
+      }
+      conversationList.value.unshift(newConversation)
+      localStorage.setItem('conversationList', JSON.stringify(conversationList.value))
+    } catch (error) {
+      console.error('创建会话失败:', error)
+      return
+    }
   }
 
   if (curUploadFiles.length > 0) {
@@ -525,6 +656,75 @@ watch(
       div {
         width: 100%;
         max-width: 48rem;
+      }
+    }
+
+    .history-list {
+      width: 100%;
+      box-sizing: border-box;
+      flex: 1 1;
+      padding: 20px;
+      display: flex;
+      flex-flow: column nowrap;
+      align-items: center;
+      overflow: auto;
+
+      .history-container {
+        width: 100%;
+        max-width: 48rem;
+      }
+
+      .history-section {
+        margin-bottom: 24px;
+
+        .section-title {
+          font-size: 14px;
+          color: #757575;
+          margin-bottom: 12px;
+        }
+
+        .history-items {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .history-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          background-color: #292a2d;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+
+          &:hover {
+            background-color: #363636;
+
+            .delete-btn {
+              opacity: 1;
+            }
+          }
+
+          .item-text {
+            color: #f5f5f5;
+            font-size: 14px;
+          }
+
+          .delete-btn {
+            opacity: 0;
+            color: #757575;
+            transition: all 0.2s;
+            padding: 4px;
+            border-radius: 4px;
+
+            &:hover {
+              background-color: #404040;
+              color: #f5f5f5;
+            }
+          }
+        }
       }
     }
   }

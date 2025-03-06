@@ -15,7 +15,7 @@ const router = createRouter({
           component: () => import('@/views/IndeInit.vue'), // 默认显示内容组件
         },
         {
-          path: '/chat/:conversationdId?', // 注意参数名与代码一致
+          path: '/chat/:conversationId?', // 注意参数名与代码一致
           name: 'chat',
           component: () => import('@/views/ChatView.vue'),
           props: true, // 自动传递路由参数

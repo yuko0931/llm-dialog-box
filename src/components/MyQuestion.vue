@@ -78,7 +78,7 @@ const { message, files } = defineProps<{
 }>()
 
 const getFilePath = (name: string) => {
-  const basepath = '/img/'
+  const basepath = '/llm-dialog-box/img/'
   const imageExtensions = ['jpg', 'png', 'gif', 'webp', 'bmp', 'pcd', 'tiff']
   // 获取文件名后缀（统一转小写
   const extension = name?.toLowerCase()?.split('.')?.pop() || ''

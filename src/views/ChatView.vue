@@ -24,7 +24,7 @@ c
       <LLMAnswer
         :answer="currentAnswer"
         :isStreaming="isStreaming"
-        v-show="isStreaming && streamingConversationId === props.conversationdId"
+        v-show="isStreaming && streamingConversationId === props.conversationId"
       ></LLMAnswer>
     </keep-alive>
   </div>
@@ -147,12 +147,12 @@ const autoScroll = ref<boolean>(true) // 是否自动滚动
 const hasExecuted = ref<boolean>(false) // 是否已经执行过一次
 
 const props = defineProps<{
-  conversationdId?: string
+  conversationId?: string
 }>()
 
 const curTitle = computed(() => {
   const curConversation = conversationList.value.find(
-    (item) => item.coversation_id === props.conversationdId,
+    (item) => item.coversation_id === props.conversationId,
   )
   return curConversation?.title
 })
@@ -181,7 +181,7 @@ const handleSendMessage = async () => {
 
 // 抽离函数，生成聊天内容
 const generateChat = async (query: string, files: uploadFileItem[]) => {
-  streamingConversationId.value = props.conversationdId as string
+  streamingConversationId.value = props.conversationId as string
   // 重置当前回答和流式状态
   currentAnswer.value = ''
   isStreaming.value = true
@@ -222,7 +222,7 @@ const generateChat = async (query: string, files: uploadFileItem[]) => {
   await streamingChat({
     final_query,
     content_type,
-    conversation_id: props.conversationdId as string,
+    conversation_id: props.conversationId as string,
     callback: (data) => {
       if (data.role === 'assistant' && !isCancelled.value) {
         // 检查取消标志位
@@ -255,7 +255,7 @@ const handleKeydownEnter = (event: KeyboardEvent) => {
 const handleStopStreaming = async () => {
   isCancelled.value = true // 设置取消标志位
   const result = await cancelstreamingChat({
-    conversation_id: props.conversationdId as string,
+    conversation_id: props.conversationId as string,
     chat_id: cur_chat_id.value,
   })
   console.log('canceled chat info:', result)
@@ -336,11 +336,13 @@ onUnmounted(() => {
 })
 
 watch(
-  [() => props.conversationdId, firstSendQuery],
-  async ([conversationdId, newQuery]) => {
+  [() => props.conversationId, firstSendQuery],
+
+  async ([conversationId, newQuery]) => {
+    console.log('sadas ', conversationId)
     if (!newQuery) {
-      if (conversationdId) {
-        const result = await getMessageList(conversationdId) // 获取消息列表
+      if (conversationId) {
+        const result = await getMessageList(conversationId) // 获取消息列表
         detailMessageList.value = result.data
         console.log('coversation messages:', detailMessageList.value)
         // 按 chat_id 分组，组间按 created_at 排序，组内按 type 排序( answer在后 )
@@ -396,7 +398,7 @@ watch(
         await generateChat(newQuery, firstSendFiles.value)
       }
     }
-    conversation_id.value = props.conversationdId || ''
+    conversation_id.value = props.conversationId || ''
   },
   {
     immediate: true,
