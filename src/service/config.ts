@@ -7,7 +7,7 @@ export default {
     DATASET_ID: '7430806536349941***',
     auth: {
       pat: {
-        COZE_API_KEY: 'pat_o8rqlWyyIOluWxku1lIP0eLPaClhsfl3idosHgAwkwgBc9nvh5JO3OGmdukkCgLR',
+        COZE_API_KEY: 'pat_ThYVkmnFdE6pDIYuaxRC7Tjqm7VjNtxA4TmqBAuuyxKmyT9PmdRRqR8hfZXdG0K8',
       },
       oauth_web: {
         COZE_CLIENT_ID: '11305246560602341248515465***',
